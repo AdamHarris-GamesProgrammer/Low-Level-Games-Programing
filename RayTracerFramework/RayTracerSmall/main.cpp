@@ -32,6 +32,9 @@
 #include <sstream>
 #include <string.h>
 
+#include "Timer.h"
+#include <thread>
+
 #if defined __linux__ || defined __APPLE__
 // "Compiled for Linux
 #else
@@ -345,9 +348,91 @@ int main(int argc, char **argv)
 {
 	// This sample only allows one choice per program execution. Feel free to improve upon this
 	srand(13);
+
+	float timeToComplete = 0.0f;
+
+	Timer timer;
+
+	std::thread threadA = std::thread([&timeToComplete] {
+		Timer timer;
+		SmoothScaling();
+		timeToComplete += timer.Mark();
+	});
+
+	std::thread threadB = std::thread([&timeToComplete] {
+		Timer timer;
+		SmoothScaling();
+		timeToComplete += timer.Mark();
+		});
+
+	std::thread threadC = std::thread([&timeToComplete] {
+		Timer timer;
+		SmoothScaling();
+		timeToComplete += timer.Mark();
+		});
+
+	std::thread threadD = std::thread([&timeToComplete] {
+		Timer timer;
+		SmoothScaling();
+		timeToComplete += timer.Mark();
+		});
+
+	std::thread threadE = std::thread([&timeToComplete] {
+		Timer timer;
+		SmoothScaling();
+		timeToComplete += timer.Mark();
+		});
+
+	std::thread threadF = std::thread([&timeToComplete] {
+		Timer timer;
+		SmoothScaling();
+		timeToComplete += timer.Mark();
+		});
+
+	std::thread threadG = std::thread([&timeToComplete] {
+		Timer timer;
+		SmoothScaling();
+		timeToComplete += timer.Mark();
+		});
+
+	std::thread threadH = std::thread([&timeToComplete] {
+		Timer timer;
+		SmoothScaling();
+		timeToComplete += timer.Mark();
+		});
+
+	std::thread threadI = std::thread([&timeToComplete] {
+		Timer timer;
+		SmoothScaling();
+		timeToComplete += timer.Mark();
+		});
+
+	std::thread threadJ = std::thread([&timeToComplete] {
+		Timer timer;
+		SmoothScaling();
+		timeToComplete += timer.Mark();
+		});
+
+
+	threadA.join();
+	threadB.join();
+	threadC.join();
+	threadD.join();
+	threadE.join();
+	threadF.join();
+	threadG.join();
+	threadH.join();
+	threadI.join();
+	threadJ.join();
+
+	float averageTime = timeToComplete / 8;
+
+	std::cout << "Average Time: " << averageTime << std::endl;
+
+
 	//BasicRender();
 	//SimpleShrinking();
-	SmoothScaling();
+	//SmoothScaling();
 
 	return 0;
 }
