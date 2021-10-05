@@ -20,6 +20,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // [/ignore]
+
 #include <stdlib.h>
 #include <cstdio>
 #include <cmath>
@@ -308,10 +309,10 @@ void SmoothScaling()
 		render(spheres, r);
 		std::cout << "Rendered and saved spheres" << r << ".ppm" << std::endl;
 	}
-	spheres.clear();
 
-	
+	spheres.clear();
 }
+
 //[comment]
 // In the main function, we will create the scene which is composed of 5 spheres
 // and 1 light (which is also a sphere). Then, once the scene description is complete
