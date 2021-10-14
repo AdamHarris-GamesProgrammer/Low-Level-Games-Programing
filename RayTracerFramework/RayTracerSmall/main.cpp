@@ -192,9 +192,9 @@ Vec3f trace(
 void render(const std::vector<Sphere>& spheres, int iteration)
 {
 	// quick and dirty
-	unsigned width = 640, height = 480;
-	// Recommended Testing Resolution
 	//unsigned width = 640, height = 480;
+	// Recommended Testing Resolution
+	unsigned width = 640, height = 480;
 
 	// Recommended Production Resolution
 	//unsigned width = 1920, height = 1080;
@@ -218,13 +218,16 @@ void render(const std::vector<Sphere>& spheres, int iteration)
 	std::string tempString = ss.str();
 	char* filename = (char*)tempString.c_str();
 
-	std::ofstream ofs(filename, std::ios::out | std::ios::binary);
-	ofs << "P6\n" << width << " " << height << "\n255\n";
+	std::stringstream fileStream;
+	fileStream << "P6\n" << width << " " << height << "\n255\n";
 	for (unsigned i = 0; i < width * height; ++i) {
-		ofs << (unsigned char)(std::min(1.0f, image[i].x) * 255) <<
+		fileStream << (unsigned char)(std::min(1.0f, image[i].x) * 255) <<
 			(unsigned char)(std::min(1.0f, image[i].y) * 255) <<
 			(unsigned char)(std::min(1.0f, image[i].z) * 255);
 	}
+
+	std::ofstream ofs(filename, std::ios::out | std::ios::binary);
+	ofs << fileStream.str();
 	ofs.close();
 
 	delete[] image;
