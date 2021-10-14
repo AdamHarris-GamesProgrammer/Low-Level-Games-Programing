@@ -199,9 +199,13 @@ void render(const std::vector<Sphere>& spheres, int iteration)
 	// Recommended Production Resolution
 	//unsigned width = 1920, height = 1080;
 	Vec3f* image = new Vec3f[width * height], * pixel = image;
-	float invWidth = 1 / float(width), invHeight = 1 / float(height);
-	float fov = 30, aspectratio = width / float(height);
+
+	float invWidth = 1 / float(width);
+	float invHeight = 1 / float(height);
+	float fov = 30;
+	float aspectratio = width / float(height);
 	float angle = tan(M_PI * 0.5 * fov / 180.0f);
+
 	// Trace rays
 	for (unsigned y = 0; y < height; ++y) {
 		for (unsigned x = 0; x < width; ++x, ++pixel) {
