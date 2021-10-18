@@ -218,13 +218,15 @@ void render(const std::vector<Sphere>& spheres, int iteration)
 	std::string tempString = ss.str();
 	char* filename = (char*)tempString.c_str();
 
-	std::ofstream ofs(filename, std::ios::out | std::ios::binary);
-	ofs << "P6\n" << width << " " << height << "\n255\n";
+	std::stringstream fs;
+	fs << "P6\n" << width << " " << height << "\n255\n";
 	for (unsigned i = 0; i < width * height; ++i) {
-		ofs << (unsigned char)(std::min(1.0f, image[i].x) * 255) <<
+		fs << (unsigned char)(std::min(1.0f, image[i].x) * 255) <<
 			(unsigned char)(std::min(1.0f, image[i].y) * 255) <<
 			(unsigned char)(std::min(1.0f, image[i].z) * 255);
 	}
+	std::ofstream ofs(filename, std::ios::out | std::ios::binary);
+	ofs << fs.str();
 	ofs.close();
 
 	delete[] image;
