@@ -200,22 +200,124 @@ void render(const std::vector<Sphere>& spheres, int iteration)
 	//unsigned width = 1920, height = 1080;
 	Vec3f* image = new Vec3f[width * height], * pixel = image;
 
-	float invWidth = 1 / float(width);
-	float invHeight = 1 / float(height);
-	float fov = 30;
-	float aspectratio = width / float(height);
-	float angle = tan(M_PI * 0.5 * fov / 180.0f);
+	//float invWidth = 1 / float(width);
+	//float invHeight = 1 / float(height);
+	//float fov = 30;
+	//float aspectratio = width / float(height);
+	//float angle = tan(M_PI * 0.5 * fov / 180.0f);
 
-	// Trace rays
-	for (unsigned y = 0; y < height; ++y) {
-		for (unsigned x = 0; x < width; ++x, ++pixel) {
-			float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
-			float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
-			Vec3f raydir(xx, yy, -1);
-			raydir.normalize();
-			*pixel = trace(Vec3f(0), raydir, spheres, 0);
+	////Trace rays
+	//for (unsigned y = 0; y < height; ++y) {
+	//	for (unsigned x = 0; x < width; ++x, ++pixel) {
+	//		float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
+	//		float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
+	//		Vec3f raydir(xx, yy, -1);
+	//		raydir.normalize();
+	//		*pixel = trace(Vec3f(0), raydir, spheres, 0);
+	//	}
+	//}
+
+	//unsigned int halfHeight = height / 2;
+	//unsigned int halfWidth = width / 2;
+
+	std::thread a = std::thread([&width, &height, &image, &spheres]
+		{
+			float invWidth = 1 / float(width);
+			float invHeight = 1 / float(height);
+			float fov = 30;
+			float aspectratio = width / float(height);
+			float angle = tan(M_PI * 0.5 * fov / 180.0f);
+
+			unsigned int halfHeight = height / 2;
+			unsigned int halfWidth = width / 2;
+
+			for (unsigned y = 0; y < halfHeight; ++y) {
+				for (unsigned x = 0; x < halfWidth; ++x) {
+					float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
+					float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
+					Vec3f raydir(xx, yy, -1);
+					raydir.normalize();
+					image[x + width * y] = trace(Vec3f(0), raydir, spheres, 0);
+				}
+			}
 		}
-	}
+	);
+
+
+	std::thread b = std::thread([&width, &height, &image, &spheres]
+		{
+			float invWidth = 1 / float(width);
+			float invHeight = 1 / float(height);
+			float fov = 30;
+			float aspectratio = width / float(height);
+			float angle = tan(M_PI * 0.5 * fov / 180.0f);
+
+			unsigned int halfHeight = height / 2;
+			unsigned int halfWidth = width / 2;
+
+			for (unsigned y = 0; y < halfHeight; ++y) {
+				for (unsigned x = halfWidth; x < width; ++x) {
+					float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
+					float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
+					Vec3f raydir(xx, yy, -1);
+					raydir.normalize();
+					image[x + width * y] = trace(Vec3f(0), raydir, spheres, 0);
+				}
+			}
+		}
+	);
+
+	std::thread c = std::thread([&width, &height, &image, &spheres]
+		{
+			float invWidth = 1 / float(width);
+			float invHeight = 1 / float(height);
+			float fov = 30;
+			float aspectratio = width / float(height);
+			float angle = tan(M_PI * 0.5 * fov / 180.0f);
+
+			unsigned int halfHeight = height / 2;
+			unsigned int halfWidth = width / 2;
+
+			for (unsigned y = halfHeight; y < height; ++y) {
+				for (unsigned x = 0; x < halfWidth; ++x) {
+					float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
+					float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
+					Vec3f raydir(xx, yy, -1);
+					raydir.normalize();
+					image[x + width * y] = trace(Vec3f(0), raydir, spheres, 0);
+				}
+			}
+		}
+	);
+
+	std::thread d = std::thread([&width, &height, &image, &spheres]
+		{
+			float invWidth = 1 / float(width);
+			float invHeight = 1 / float(height);
+			float fov = 30;
+			float aspectratio = width / float(height);
+			float angle = tan(M_PI * 0.5 * fov / 180.0f);
+
+			unsigned int halfHeight = height / 2;
+			unsigned int halfWidth = width / 2;
+
+			for (unsigned y = halfHeight; y < height; ++y) {
+				for (unsigned x = halfWidth; x < width; ++x) {
+					float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
+					float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
+					Vec3f raydir(xx, yy, -1);
+					raydir.normalize();
+					image[x + width * y] = trace(Vec3f(0), raydir, spheres, 0);
+				}
+			}
+		}
+	);
+
+	a.join();
+	b.join();
+	c.join();
+	d.join();
+
 	// Save result to a PPM image (keep these flags if you compile under Windows)
 	std::stringstream ss;
 	ss << "./spheres" << iteration << ".ppm";
