@@ -184,6 +184,25 @@ Vec3f trace(
 	return surfaceColor + sphere->_emissionColor;
 }
 
+void RenderSector(unsigned int startX, unsigned int startY, unsigned int endX, unsigned int endY, unsigned int width, unsigned int height, const std::vector<Sphere>& spheres, Vec3f* image) {
+	float invWidth = 1 / float(width);
+	float invHeight = 1 / float(height);
+	float fov = 30;
+	float aspectratio = width / float(height);
+	float angle = tan(M_PI * 0.5 * fov / 180.0f);
+
+	for (unsigned y = startY; y < endY; ++y) {
+		for (unsigned x = startX; x < endX; ++x) {
+			float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
+			float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
+			Vec3f raydir(xx, yy, -1);
+			raydir.normalize();
+			image[x + width * y] = trace(Vec3f(0), raydir, spheres, 0);
+		}
+	}
+}
+
+
 //[comment]
 // Main rendering function. We compute a camera ray for each pixel of the image
 // trace it and return a color. If the ray hits a sphere, we return the color of the
@@ -191,8 +210,6 @@ Vec3f trace(
 //[/comment]
 void render(const std::vector<Sphere>& spheres, int iteration)
 {
-	// quick and dirty
-	//unsigned width = 640, height = 480;
 	// Recommended Testing Resolution
 	unsigned width = 640, height = 480;
 
@@ -200,116 +217,29 @@ void render(const std::vector<Sphere>& spheres, int iteration)
 	//unsigned width = 1920, height = 1080;
 	Vec3f* image = new Vec3f[width * height], * pixel = image;
 
-	//float invWidth = 1 / float(width);
-	//float invHeight = 1 / float(height);
-	//float fov = 30;
-	//float aspectratio = width / float(height);
-	//float angle = tan(M_PI * 0.5 * fov / 180.0f);
-
-	////Trace rays
-	//for (unsigned y = 0; y < height; ++y) {
-	//	for (unsigned x = 0; x < width; ++x, ++pixel) {
-	//		float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
-	//		float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
-	//		Vec3f raydir(xx, yy, -1);
-	//		raydir.normalize();
-	//		*pixel = trace(Vec3f(0), raydir, spheres, 0);
-	//	}
-	//}
-
-	//unsigned int halfHeight = height / 2;
-	//unsigned int halfWidth = width / 2;
 
 	std::thread a = std::thread([&width, &height, &image, &spheres]
 		{
-			float invWidth = 1 / float(width);
-			float invHeight = 1 / float(height);
-			float fov = 30;
-			float aspectratio = width / float(height);
-			float angle = tan(M_PI * 0.5 * fov / 180.0f);
-
-			unsigned int halfHeight = height / 2;
-			unsigned int halfWidth = width / 2;
-
-			for (unsigned y = 0; y < halfHeight; ++y) {
-				for (unsigned x = 0; x < halfWidth; ++x) {
-					float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
-					float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
-					Vec3f raydir(xx, yy, -1);
-					raydir.normalize();
-					image[x + width * y] = trace(Vec3f(0), raydir, spheres, 0);
-				}
-			}
+			RenderSector(0, 0, width / 2, height / 2, width, height, spheres, image);
 		}
 	);
 
 
 	std::thread b = std::thread([&width, &height, &image, &spheres]
 		{
-			float invWidth = 1 / float(width);
-			float invHeight = 1 / float(height);
-			float fov = 30;
-			float aspectratio = width / float(height);
-			float angle = tan(M_PI * 0.5 * fov / 180.0f);
-
-			unsigned int halfHeight = height / 2;
-			unsigned int halfWidth = width / 2;
-
-			for (unsigned y = 0; y < halfHeight; ++y) {
-				for (unsigned x = halfWidth; x < width; ++x) {
-					float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
-					float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
-					Vec3f raydir(xx, yy, -1);
-					raydir.normalize();
-					image[x + width * y] = trace(Vec3f(0), raydir, spheres, 0);
-				}
-			}
+			RenderSector(width / 2, 0, width , height / 2, width, height, spheres, image);
 		}
 	);
 
 	std::thread c = std::thread([&width, &height, &image, &spheres]
 		{
-			float invWidth = 1 / float(width);
-			float invHeight = 1 / float(height);
-			float fov = 30;
-			float aspectratio = width / float(height);
-			float angle = tan(M_PI * 0.5 * fov / 180.0f);
-
-			unsigned int halfHeight = height / 2;
-			unsigned int halfWidth = width / 2;
-
-			for (unsigned y = halfHeight; y < height; ++y) {
-				for (unsigned x = 0; x < halfWidth; ++x) {
-					float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
-					float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
-					Vec3f raydir(xx, yy, -1);
-					raydir.normalize();
-					image[x + width * y] = trace(Vec3f(0), raydir, spheres, 0);
-				}
-			}
+			RenderSector(0, height / 2, width / 2, height, width, height, spheres, image);
 		}
 	);
 
 	std::thread d = std::thread([&width, &height, &image, &spheres]
 		{
-			float invWidth = 1 / float(width);
-			float invHeight = 1 / float(height);
-			float fov = 30;
-			float aspectratio = width / float(height);
-			float angle = tan(M_PI * 0.5 * fov / 180.0f);
-
-			unsigned int halfHeight = height / 2;
-			unsigned int halfWidth = width / 2;
-
-			for (unsigned y = halfHeight; y < height; ++y) {
-				for (unsigned x = halfWidth; x < width; ++x) {
-					float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
-					float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
-					Vec3f raydir(xx, yy, -1);
-					raydir.normalize();
-					image[x + width * y] = trace(Vec3f(0), raydir, spheres, 0);
-				}
-			}
+			RenderSector(width / 2, height / 2, width, height, width, height, spheres, image);
 		}
 	);
 
