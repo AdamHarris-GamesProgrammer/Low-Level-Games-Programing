@@ -123,6 +123,7 @@ Vec3f trace(
 	}
 	// if there's no intersection return black or background color
 	if (!sphere) return Vec3f(2);
+
 	Vec3f surfaceColor = 0; // color of the ray/surfaceof the object intersected by the ray
 	Vec3f phit = rayorig + raydir * tnear; // point of intersection
 	Vec3f nhit = phit - sphere->_center; // normal at the intersection point
@@ -134,7 +135,7 @@ Vec3f trace(
 	float bias = 1e-4; // add some bias to the point from which we will be tracing
 	bool inside = false;
 	if (raydir.dot(nhit) > 0) nhit = -nhit, inside = true;
-	if ((sphere->_transparency > 0 || sphere->_reflection > 0) && depth < MAX_RAY_DEPTH) {
+	if (depth < MAX_RAY_DEPTH && (sphere->_transparency > 0 || sphere->_reflection > 0)) {
 		float facingratio = -raydir.dot(nhit);
 		// change the mix value to tweak the effect
 		float fresneleffect = mix(pow(1 - facingratio, 3), 1, 0.1);
@@ -190,6 +191,7 @@ void RenderSector(unsigned int startX, unsigned int startY, unsigned int endX, u
 	float fov = 30;
 	float aspectratio = width / float(height);
 	float angle = tan(M_PI * 0.5 * fov / 180.0f);
+	int index = 0;
 
 	for (unsigned y = startY; y < endY; ++y) {
 		for (unsigned x = startX; x < endX; ++x) {
@@ -197,7 +199,8 @@ void RenderSector(unsigned int startX, unsigned int startY, unsigned int endX, u
 			float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
 			Vec3f raydir(xx, yy, -1);
 			raydir.normalize();
-			image[x + width * y] = trace(Vec3f(0), raydir, spheres, 0);
+			image[index] = trace(Vec3f(0), raydir, spheres, 0);
+			index++;
 		}
 	}
 }
@@ -215,38 +218,88 @@ void render(const std::vector<Sphere>& spheres, int iteration)
 
 	// Recommended Production Resolution
 	//unsigned width = 1920, height = 1080;
-	Vec3f* image = new Vec3f[width * height], * pixel = image;
+	//Vec3f* image = new Vec3f[width * height], * pixel = image;
+	std::vector<Vec3f> image;
+	image.resize(width * height);
 
 
-	std::thread a = std::thread([&width, &height, &image, &spheres]
+	unsigned int halfWidth = width / 2;
+	unsigned int halfHeight = height / 2;
+	Vec3f* firstChunk = new Vec3f[halfWidth * halfHeight];
+	Vec3f* secondChunk = new Vec3f[halfWidth * halfHeight];
+	Vec3f* thirdChunk = new Vec3f[halfWidth * halfHeight];
+	Vec3f* fourthChunk = new Vec3f[halfWidth * halfHeight];
+
+	std::thread a = std::thread([width, height, &firstChunk, spheres]
 		{
-			RenderSector(0, 0, width / 2, height / 2, width, height, spheres, image);
+			RenderSector(0, 0, width / 2, height / 2, width, height, spheres, firstChunk);
 		}
 	);
 
 
-	std::thread b = std::thread([&width, &height, &image, &spheres]
+	std::thread b = std::thread([width, height, &secondChunk, spheres]
 		{
-			RenderSector(width / 2, 0, width , height / 2, width, height, spheres, image);
+			RenderSector(width / 2, 0, width , height / 2, width, height, spheres, secondChunk);
 		}
 	);
 
-	std::thread c = std::thread([&width, &height, &image, &spheres]
+	std::thread c = std::thread([width, height, &thirdChunk, spheres]
 		{
-			RenderSector(0, height / 2, width / 2, height, width, height, spheres, image);
+			RenderSector(0, height / 2, width / 2, height, width, height, spheres, thirdChunk);
 		}
 	);
 
-	std::thread d = std::thread([&width, &height, &image, &spheres]
+	std::thread d = std::thread([width, height, &fourthChunk, spheres]
 		{
-			RenderSector(width / 2, height / 2, width, height, width, height, spheres, image);
+			RenderSector(width / 2, height / 2, width, height, width, height, spheres, fourthChunk);
 		}
 	);
 
 	a.join();
+	int index = 0;
+	for (unsigned y = 0; y < halfHeight; ++y) {
+		for (unsigned x = 0; x < halfWidth; ++x) {
+			image[x + width * y] = firstChunk[index];
+			index++;
+		}
+	}
+
 	b.join();
+	index = 0;
+	for (unsigned y = 0; y < halfHeight; ++y) {
+		for (unsigned x = halfWidth; x < width; ++x) {
+			image[x + width * y] = secondChunk[index];
+			index++;
+		}
+	}
+
 	c.join();
+	index = 0;
+	for (unsigned y = halfHeight; y < height; ++y) {
+		for (unsigned x = 0; x < halfWidth; ++x) {
+			image[x + width * y] = thirdChunk[index];
+			index++;
+		}
+	}
+
 	d.join();
+	index = 0;
+	for (unsigned y = halfHeight; y < height; ++y) {
+		for (unsigned x = halfWidth; x < width; ++x) {
+			image[x + width * y] = fourthChunk[index];
+			index++;
+		}
+	}
+
+	delete[] firstChunk;
+	firstChunk = nullptr;
+	delete[] secondChunk;
+	secondChunk = nullptr;
+	delete[] thirdChunk;
+	thirdChunk = nullptr;
+	delete[] fourthChunk;
+	fourthChunk = nullptr;
+
 
 	// Save result to a PPM image (keep these flags if you compile under Windows)
 	std::stringstream ss;
@@ -266,8 +319,7 @@ void render(const std::vector<Sphere>& spheres, int iteration)
 	ofs << fileStream.str();
 	ofs.close();
 
-	delete[] image;
-	image = nullptr;
+	image.clear();
 }
 
 void BasicRender()
