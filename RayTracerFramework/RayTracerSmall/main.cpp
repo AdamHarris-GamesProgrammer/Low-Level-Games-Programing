@@ -185,14 +185,21 @@ Vec3f trace(
 	return surfaceColor + sphere->_emissionColor;
 }
 
-void RenderSector(unsigned int startX, unsigned int startY, unsigned int endX, unsigned int endY, unsigned int width, unsigned int height, const std::vector<Sphere>& spheres, Vec3f* image) {
-	float invWidth = 1 / float(width);
-	float invHeight = 1 / float(height);
-	float fov = 30;
-	float aspectratio = width / float(height);
-	float angle = tan(M_PI * 0.5 * fov / 180.0f);
-	int index = 0;
+float fov = 30;
+float angle = tan(M_PI * 0.5 * fov / 180.0f);
 
+void RenderSector(
+	const unsigned int startX, 
+	const unsigned int startY, 
+	const unsigned int endX, 
+	const unsigned int endY, 
+	const float& invWidth, 
+	const float& invHeight,
+	const float& aspectratio,
+	const std::vector<Sphere>& spheres, Vec3f* image) 
+{
+
+	int index = 0;
 	for (unsigned y = startY; y < endY; ++y) {
 		for (unsigned x = startX; x < endX; ++x) {
 			float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
@@ -218,40 +225,43 @@ void render(const std::vector<Sphere>& spheres, int iteration)
 
 	// Recommended Production Resolution
 	//unsigned width = 1920, height = 1080;
-	//Vec3f* image = new Vec3f[width * height], * pixel = image;
-	std::vector<Vec3f> image;
-	image.resize(width * height);
+	Vec3f* image = new Vec3f[width * height];
 
 
 	unsigned int halfWidth = width / 2;
 	unsigned int halfHeight = height / 2;
-	Vec3f* firstChunk = new Vec3f[halfWidth * halfHeight];
-	Vec3f* secondChunk = new Vec3f[halfWidth * halfHeight];
-	Vec3f* thirdChunk = new Vec3f[halfWidth * halfHeight];
-	Vec3f* fourthChunk = new Vec3f[halfWidth * halfHeight];
+	unsigned int size = halfWidth * halfHeight;
+	Vec3f* firstChunk = new Vec3f[size];
+	Vec3f* secondChunk = new Vec3f[size];
+	Vec3f* thirdChunk = new Vec3f[size];
+	Vec3f* fourthChunk = new Vec3f[size];
 
-	std::thread a = std::thread([width, height, &firstChunk, spheres]
+	float invWidth = 1 / float(width);
+	float invHeight = 1 / float(height);
+	float aspectratio = width / float(height);
+
+	std::thread a = std::thread([&halfWidth, &halfHeight, &firstChunk, spheres, &aspectratio, &invWidth, &invHeight]
 		{
-			RenderSector(0, 0, width / 2, height / 2, width, height, spheres, firstChunk);
+			RenderSector(0, 0, halfWidth, halfHeight, invWidth, invHeight, aspectratio, spheres, std::ref(firstChunk));
 		}
 	);
 
 
-	std::thread b = std::thread([width, height, &secondChunk, spheres]
+	std::thread b = std::thread([&halfWidth, &width, &halfHeight, &secondChunk, spheres, &aspectratio, &invWidth, &invHeight]
 		{
-			RenderSector(width / 2, 0, width , height / 2, width, height, spheres, secondChunk);
+			RenderSector(halfWidth, 0, width , halfHeight, invWidth, invHeight, aspectratio, spheres, std::ref(secondChunk));
 		}
 	);
 
-	std::thread c = std::thread([width, height, &thirdChunk, spheres]
+	std::thread c = std::thread([&halfHeight, &halfWidth, &height, &thirdChunk, spheres, &aspectratio, &invWidth, &invHeight]
 		{
-			RenderSector(0, height / 2, width / 2, height, width, height, spheres, thirdChunk);
+			RenderSector(0, halfHeight, halfWidth, height, invWidth, invHeight, aspectratio, spheres, std::ref(thirdChunk));
 		}
 	);
 
-	std::thread d = std::thread([width, height, &fourthChunk, spheres]
+	std::thread d = std::thread([&halfWidth, &halfHeight, &width, &height, &fourthChunk, spheres, &aspectratio, &invWidth, &invHeight]
 		{
-			RenderSector(width / 2, height / 2, width, height, width, height, spheres, fourthChunk);
+			RenderSector(halfWidth, halfHeight, width, height, invWidth, invHeight, aspectratio, spheres, std::ref(fourthChunk));
 		}
 	);
 
@@ -319,7 +329,8 @@ void render(const std::vector<Sphere>& spheres, int iteration)
 	ofs << fileStream.str();
 	ofs.close();
 
-	image.clear();
+	delete[] image;
+	image = nullptr;
 }
 
 void BasicRender()
