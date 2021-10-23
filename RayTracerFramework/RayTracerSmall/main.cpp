@@ -161,13 +161,13 @@ Vec3f trace(
 	}
 	else {
 		// it's a diffuse object, no need to raytrace any further
-		for (unsigned i = 0; i < spheres.size(); ++i) {
+		for (unsigned i = spheres.size() - 1; i != 0; --i) {
 			if (spheres[i]._emissionColor.x > 0) {
 				// this is a light
 				Vec3f transmission = 1;
 				Vec3f lightDirection = spheres[i]._center - phit;
 				lightDirection.normalize();
-				for (unsigned j = 0; j < spheres.size(); ++j) {
+				for (unsigned j = spheres.size() - 1; j != 0;) {
 					if (i != j) {
 						float t0, t1;
 						if (spheres[j].intersect(phit + nhit * bias, lightDirection, t0, t1)) {
