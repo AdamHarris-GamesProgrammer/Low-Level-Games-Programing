@@ -111,7 +111,8 @@ Vec3f trace(
 	float tnear = INFINITY;
 	const Sphere* sphere = NULL;
 	// find intersection of this ray with the sphere in the scene
-	for (unsigned i = 0; i < spheres.size(); ++i) {
+	std::vector<Sphere*>::size_type size = spheres.size();
+	for (unsigned i = 0; i < size; ++i) {
 		float t0 = INFINITY, t1 = INFINITY;
 		if (spheres[i].intersect(rayorig, raydir, t0, t1)) {
 			if (t0 < 0) t0 = t1;
@@ -161,13 +162,13 @@ Vec3f trace(
 	}
 	else {
 		// it's a diffuse object, no need to raytrace any further
-		for (unsigned i = spheres.size() - 1; i != 0; --i) {
+		for (unsigned i = size - 1; i != 0; --i) {
 			if (spheres[i]._emissionColor.x > 0) {
 				// this is a light
 				Vec3f transmission = 1;
 				Vec3f lightDirection = spheres[i]._center - phit;
 				lightDirection.normalize();
-				for (unsigned j = spheres.size() - 1; j != 0;) {
+				for (unsigned j = size - 1; j != 0; --j) {
 					if (i != j) {
 						float t0, t1;
 						if (spheres[j].intersect(phit + nhit * bias, lightDirection, t0, t1)) {
@@ -240,32 +241,32 @@ void render(const std::vector<Sphere>& spheres, int iteration)
 	float invHeight = 1 / float(height);
 	float aspectratio = width / float(height);
 
-	std::thread a = std::thread([&halfWidth, &halfHeight, &firstChunk, spheres, &aspectratio, &invWidth, &invHeight]
+	std::thread topLeft = std::thread([&halfWidth, &halfHeight, &firstChunk, spheres, &aspectratio, &invWidth, &invHeight]
 		{
 			RenderSector(0, 0, halfWidth, halfHeight, invWidth, invHeight, aspectratio, spheres, std::ref(firstChunk));
 		}
 	);
 
 
-	std::thread b = std::thread([&halfWidth, &width, &halfHeight, &secondChunk, spheres, &aspectratio, &invWidth, &invHeight]
+	std::thread topRight = std::thread([&halfWidth, &width, &halfHeight, &secondChunk, spheres, &aspectratio, &invWidth, &invHeight]
 		{
 			RenderSector(halfWidth, 0, width , halfHeight, invWidth, invHeight, aspectratio, spheres, std::ref(secondChunk));
 		}
 	);
 
-	std::thread c = std::thread([&halfHeight, &halfWidth, &height, &thirdChunk, spheres, &aspectratio, &invWidth, &invHeight]
+	std::thread bottomLeft = std::thread([&halfHeight, &halfWidth, &height, &thirdChunk, spheres, &aspectratio, &invWidth, &invHeight]
 		{
 			RenderSector(0, halfHeight, halfWidth, height, invWidth, invHeight, aspectratio, spheres, std::ref(thirdChunk));
 		}
 	);
 
-	std::thread d = std::thread([&halfWidth, &halfHeight, &width, &height, &fourthChunk, spheres, &aspectratio, &invWidth, &invHeight]
+	std::thread bottomRight = std::thread([&halfWidth, &halfHeight, &width, &height, &fourthChunk, spheres, &aspectratio, &invWidth, &invHeight]
 		{
 			RenderSector(halfWidth, halfHeight, width, height, invWidth, invHeight, aspectratio, spheres, std::ref(fourthChunk));
 		}
 	);
 
-	a.join();
+	topLeft.join();
 	int index = 0;
 	for (unsigned y = 0; y < halfHeight; ++y) {
 		for (unsigned x = 0; x < halfWidth; ++x) {
@@ -274,7 +275,7 @@ void render(const std::vector<Sphere>& spheres, int iteration)
 		}
 	}
 
-	b.join();
+	topRight.join();
 	index = 0;
 	for (unsigned y = 0; y < halfHeight; ++y) {
 		for (unsigned x = halfWidth; x < width; ++x) {
@@ -283,7 +284,7 @@ void render(const std::vector<Sphere>& spheres, int iteration)
 		}
 	}
 
-	c.join();
+	bottomLeft.join();
 	index = 0;
 	for (unsigned y = halfHeight; y < height; ++y) {
 		for (unsigned x = 0; x < halfWidth; ++x) {
@@ -292,7 +293,7 @@ void render(const std::vector<Sphere>& spheres, int iteration)
 		}
 	}
 
-	d.join();
+	bottomRight.join();
 	index = 0;
 	for (unsigned y = halfHeight; y < height; ++y) {
 		for (unsigned x = halfWidth; x < width; ++x) {
