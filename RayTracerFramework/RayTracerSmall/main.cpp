@@ -189,6 +189,28 @@ Vec3f trace(
 float fov = 30;
 float angle = tan(M_PI * 0.5 * fov / 180.0f);
 
+struct RenderConfig {
+	unsigned width;
+	unsigned height;
+	unsigned halfWidth;
+	unsigned halfHeight;
+	unsigned fullSize;
+	unsigned chunkSize;
+	float invWidth;
+	float invHeight;
+	float aspectRatio;
+	char buffer[28];
+
+	void CalculateValues() {
+		halfWidth = width / 2;
+		fullSize = width * height;
+		chunkSize = halfWidth * halfHeight;
+		invWidth = 1 / float(width);
+		invHeight = 1 / float(height);
+		aspectRatio = width / float(height);
+	}
+};
+
 void RenderSector(
 	const unsigned int startX, 
 	const unsigned int startY, 
@@ -219,85 +241,72 @@ void RenderSector(
 // trace it and return a color. If the ray hits a sphere, we return the color of the
 // sphere at the intersection point, else we return the background color.
 //[/comment]
-void render(const std::vector<Sphere>& spheres, int iteration)
+void render(const RenderConfig& config, const std::vector<Sphere>& spheres, int iteration)
 {
-	// Recommended Testing Resolution
-	unsigned width = 640, height = 480;
+	Vec3f* image = new Vec3f[config.fullSize];
+	Vec3f* firstChunk = new Vec3f[config.chunkSize];
+	Vec3f* secondChunk = new Vec3f[config.chunkSize];
+	Vec3f* thirdChunk = new Vec3f[config.chunkSize];
+	Vec3f* fourthChunk = new Vec3f[config.chunkSize];
 
-	// Recommended Production Resolution
-	//unsigned width = 1920, height = 1080;
-	Vec3f* image = new Vec3f[width * height];
 
-
-	unsigned int halfWidth = width / 2;
-	unsigned int halfHeight = height / 2;
-	unsigned int size = halfWidth * halfHeight;
-	Vec3f* firstChunk = new Vec3f[size];
-	Vec3f* secondChunk = new Vec3f[size];
-	Vec3f* thirdChunk = new Vec3f[size];
-	Vec3f* fourthChunk = new Vec3f[size];
-
-	float invWidth = 1 / float(width);
-	float invHeight = 1 / float(height);
-	float aspectratio = width / float(height);
-
-	std::thread topLeft = std::thread([&halfWidth, &halfHeight, &firstChunk, spheres, &aspectratio, &invWidth, &invHeight]
+	std::thread topLeft = std::thread([&config, &firstChunk, spheres]
 		{
-			RenderSector(0, 0, halfWidth, halfHeight, invWidth, invHeight, aspectratio, spheres, std::ref(firstChunk));
+			RenderSector(0, 0, config.halfWidth, config.halfHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(firstChunk));
 		}
 	);
 
 
-	std::thread topRight = std::thread([&halfWidth, &width, &halfHeight, &secondChunk, spheres, &aspectratio, &invWidth, &invHeight]
+	std::thread topRight = std::thread([&config, &secondChunk, spheres]
 		{
-			RenderSector(halfWidth, 0, width , halfHeight, invWidth, invHeight, aspectratio, spheres, std::ref(secondChunk));
+			RenderSector(config.halfWidth, 0, config.width , config.halfHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(secondChunk));
 		}
 	);
 
-	std::thread bottomLeft = std::thread([&halfHeight, &halfWidth, &height, &thirdChunk, spheres, &aspectratio, &invWidth, &invHeight]
+	std::thread bottomLeft = std::thread([&config, &thirdChunk, spheres]
 		{
-			RenderSector(0, halfHeight, halfWidth, height, invWidth, invHeight, aspectratio, spheres, std::ref(thirdChunk));
+			RenderSector(0, config.halfHeight, config.halfWidth, config.height, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(thirdChunk));
 		}
 	);
 
-	std::thread bottomRight = std::thread([&halfWidth, &halfHeight, &width, &height, &fourthChunk, spheres, &aspectratio, &invWidth, &invHeight]
+	std::thread bottomRight = std::thread([&config, &fourthChunk, spheres]
 		{
-			RenderSector(halfWidth, halfHeight, width, height, invWidth, invHeight, aspectratio, spheres, std::ref(fourthChunk));
+			RenderSector(config.halfWidth, config.halfHeight, config.width, config.height, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(fourthChunk));
 		}
 	);
 
 	topLeft.join();
 	int index = 0;
-	for (unsigned y = 0; y < halfHeight; ++y) {
-		for (unsigned x = 0; x < halfWidth; ++x) {
-			image[x + width * y] = firstChunk[index];
+	for (unsigned y = 0; y < config.halfHeight; ++y) {
+		for (unsigned x = 0; x < config.halfWidth; ++x) {
+			image[x + config.width * y] = firstChunk[index];
 			index++;
 		}
 	}
 
 	topRight.join();
 	index = 0;
-	for (unsigned y = 0; y < halfHeight; ++y) {
-		for (unsigned x = halfWidth; x < width; ++x) {
-			image[x + width * y] = secondChunk[index];
+	for (unsigned y = 0; y < config.halfHeight; ++y) {
+		for (unsigned x = config.halfWidth; x < config.width; ++x) {
+			image[x + config.width * y] = secondChunk[index];
 			index++;
 		}
 	}
 
 	bottomLeft.join();
 	index = 0;
-	for (unsigned y = halfHeight; y < height; ++y) {
-		for (unsigned x = 0; x < halfWidth; ++x) {
-			image[x + width * y] = thirdChunk[index];
+	for (unsigned y = config.halfHeight; y < config.height; ++y) {
+		for (unsigned x = 0; x < config.halfWidth; ++x) {
+			image[x + config.width * y] = thirdChunk[index];
 			index++;
 		}
 	}
 
 	bottomRight.join();
 	index = 0;
-	for (unsigned y = halfHeight; y < height; ++y) {
-		for (unsigned x = halfWidth; x < width; ++x) {
-			image[x + width * y] = fourthChunk[index];
+	for (unsigned y = config.halfHeight; y < config.height; ++y) {
+		for (unsigned x = config.halfWidth; x < config.width; ++x) {
+			image[x + config.width * y] = fourthChunk[index];
 			index++;
 		}
 	}
@@ -319,8 +328,8 @@ void render(const std::vector<Sphere>& spheres, int iteration)
 	char* filename = (char*)tempString.c_str();
 
 	std::stringstream fileStream;
-	fileStream << "P6\n" << width << " " << height << "\n255\n";
-	for (unsigned i = 0; i < width * height; ++i) {
+	fileStream << "P6\n" << config.width << " " << config.height << "\n255\n";
+	for (unsigned i = 0; i < config.fullSize; ++i) {
 		fileStream << (unsigned char)(std::min(1.0f, image[i].x) * 255) <<
 			(unsigned char)(std::min(1.0f, image[i].y) * 255) <<
 			(unsigned char)(std::min(1.0f, image[i].z) * 255);
@@ -334,7 +343,7 @@ void render(const std::vector<Sphere>& spheres, int iteration)
 	image = nullptr;
 }
 
-void BasicRender()
+void BasicRender(const RenderConfig& config)
 {
 	std::vector<Sphere> spheres;
 	// Vector structure for Sphere (position, radius, surface color, reflectivity, transparency, emission color)
@@ -345,11 +354,11 @@ void BasicRender()
 	spheres.push_back(Sphere(Vec3f(5.0, 0, -25), 3, Vec3f(0.65, 0.77, 0.97), 1, 0.0));
 
 	// This creates a file, titled 1.ppm in the current working directory
-	render(spheres, 1);
+	render(config, spheres, 1);
 
 }
 
-void SimpleShrinking()
+void SimpleShrinking(const RenderConfig& config)
 {
 	std::vector<Sphere> spheres;
 	// Vector structure for Sphere (position, radius, surface color, reflectivity, transparency, emission color)
@@ -386,13 +395,13 @@ void SimpleShrinking()
 			spheres.push_back(Sphere(Vec3f(5.0, 0, -25), 3, Vec3f(0.65, 0.77, 0.97), 1, 0.0));
 		}
 
-		render(spheres, i);
+		render(config, spheres, i);
 		// Dont forget to clear the Vector holding the spheres.
 		spheres.clear();
 	}
 }
 
-void SmoothScaling()
+void SmoothScaling(const RenderConfig& config)
 {
 	std::vector<Sphere> spheres;
 	// Vector structure for Sphere (position, radius, surface color, reflectivity, transparency, emission color)
@@ -409,7 +418,7 @@ void SmoothScaling()
 		spheres[1]._radius = radius;
 		spheres[1]._radiusSqr = radius * radius;
 
-		render(spheres, r);
+		render(config, spheres, r);
 		std::cout << "Rendered and saved spheres" << r << ".ppm" << std::endl;
 	}
 
@@ -429,7 +438,16 @@ int main(int argc, char** argv)
 	float timeToComplete = 0.0f;
 
 	Timer timer;
-	SmoothScaling();
+
+	RenderConfig configObject;
+	configObject.width = 640;
+	configObject.height = 480;
+	configObject.CalculateValues();
+
+	SmoothScaling(configObject);
+	//BasicRender(configObject);
+	//SimpleShrinking(configObject);
+
 	timeToComplete += timer.Mark();
 
 	std::cout << "Time to complete: " << timeToComplete << std::endl;
