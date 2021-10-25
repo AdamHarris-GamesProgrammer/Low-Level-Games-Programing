@@ -203,6 +203,7 @@ struct RenderConfig {
 
 	void CalculateValues() {
 		halfWidth = width / 2;
+		halfHeight = height / 2;
 		fullSize = width * height;
 		chunkSize = halfWidth * halfHeight;
 		invWidth = 1 / float(width);
