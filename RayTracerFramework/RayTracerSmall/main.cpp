@@ -35,6 +35,7 @@
 
 #include "Timer.h"
 #include "Vec3.h"
+#include "MemoryManager.h"
 #include <thread>
 
 #if defined __linux__ || defined __APPLE__
