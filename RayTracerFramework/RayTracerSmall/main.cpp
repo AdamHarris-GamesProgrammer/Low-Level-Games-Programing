@@ -446,9 +446,16 @@ int main(int argc, char** argv)
 	configObject.height = 480;
 	configObject.CalculateValues();
 
-	SmoothScaling(configObject);
+	int* v = new int;
+
+	//SmoothScaling(configObject);
 	//BasicRender(configObject);
 	//SimpleShrinking(configObject);
+
+
+	delete v;
+	v = nullptr;
+
 
 	timeToComplete += timer.Mark();
 
