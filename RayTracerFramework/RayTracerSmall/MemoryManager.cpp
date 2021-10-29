@@ -1,13 +1,16 @@
 #include "MemoryManager.h"
 #include<iostream>
 
-void* operator new(size_t size) {
+void* operator new(size_t size, Heap* heap) {
 	size_t requestedBytes = size + sizeof(Header) + sizeof(Footer);
 	char* pMem = (char*)malloc(requestedBytes);
 
 	Header* pHeader = (Header*)pMem;
 	pHeader->size = size;
 	pHeader->check = deadCode;
+	pHeader->pHeap = heap;
+
+	pHeader->pHeap->AllocateMemory(size);
 
 	//Get the location of the footer start position
 	//pMem (start of mem block) + sizeof(header) (offset) + size of the mem block. Will give the memory position of the footer
@@ -31,6 +34,8 @@ void operator delete(void* pMem) {
 	if (pFooter->check != deadCode) {
 		std::cout << "[ERROR: MemoryManager::delete]: Footer check code does not match" << std::endl;
 	}
+
+	pHeader->pHeap->DeallocateMemory(pHeader->size);
 
 	free(pHeader);
 }

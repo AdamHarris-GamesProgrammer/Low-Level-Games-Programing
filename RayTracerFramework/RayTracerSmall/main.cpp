@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <sstream>
 #include <string.h>
+#include "Heap.h"
 
 #include "Timer.h"
 #include "Vec3.h"
@@ -446,16 +447,24 @@ int main(int argc, char** argv)
 	configObject.height = 480;
 	configObject.CalculateValues();
 
-	int* v = new int;
+	Heap* defaultHeap = new Heap;
+
+	int* v = new(defaultHeap) int;
 
 	//SmoothScaling(configObject);
 	//BasicRender(configObject);
 	//SimpleShrinking(configObject);
 
+	int* arr = new (defaultHeap) int[1000];
+
+	std::cout << "Allocating" << std::endl;
+	std::cout << "Total amount of memory allocated: " << defaultHeap->GetAmountAllocated() << std::endl;
 
 	delete v;
 	v = nullptr;
 
+	std::cout << "Deallocating" << std::endl;
+	std::cout << "Total amount of memory allocated: " << defaultHeap->GetAmountAllocated() << std::endl;
 
 	timeToComplete += timer.Mark();
 
