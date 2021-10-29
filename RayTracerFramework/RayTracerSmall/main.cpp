@@ -37,6 +37,7 @@
 #include "Timer.h"
 #include "Vec3.h"
 #include "MemoryManager.h"
+#include "HeapFactory.h"
 #include <thread>
 
 #if defined __linux__ || defined __APPLE__
@@ -447,24 +448,25 @@ int main(int argc, char** argv)
 	configObject.height = 480;
 	configObject.CalculateValues();
 
-	Heap* defaultHeap = new Heap;
+	HeapFactory::Init();
 
-	int* v = new(defaultHeap) int;
+
+	int* v = new int;
 
 	//SmoothScaling(configObject);
 	//BasicRender(configObject);
 	//SimpleShrinking(configObject);
 
-	int* arr = new (defaultHeap) int[1000];
+	int* arr = new int[1000];
 
 	std::cout << "Allocating" << std::endl;
-	std::cout << "Total amount of memory allocated: " << defaultHeap->GetAmountAllocated() << std::endl;
+	std::cout << "Total amount of memory allocated: " << HeapFactory::GetDefaultHeap()->GetAmountAllocated() << std::endl;
 
 	delete v;
 	v = nullptr;
 
 	std::cout << "Deallocating" << std::endl;
-	std::cout << "Total amount of memory allocated: " << defaultHeap->GetAmountAllocated() << std::endl;
+	std::cout << "Total amount of memory allocated: " << HeapFactory::GetDefaultHeap()->GetAmountAllocated() << std::endl;
 
 	timeToComplete += timer.Mark();
 

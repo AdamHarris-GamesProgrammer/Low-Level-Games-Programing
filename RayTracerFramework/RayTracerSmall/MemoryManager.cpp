@@ -1,4 +1,5 @@
 #include "MemoryManager.h"
+
 #include<iostream>
 
 void* operator new(size_t size, Heap* heap) {
@@ -24,6 +25,11 @@ void* operator new(size_t size, Heap* heap) {
 	return pStartMemBlock;
 
 }
+
+void* operator new(size_t size) {
+	return ::operator new(size, HeapFactory::GetDefaultHeap());
+}
+
 void operator delete(void* pMem) {
 	Header* pHeader = (Header*)((char*)pMem - sizeof(Header));
 	if (pHeader->check != deadCode) {
