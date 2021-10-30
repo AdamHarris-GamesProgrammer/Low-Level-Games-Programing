@@ -459,8 +459,14 @@ int main(int argc, char** argv)
 
 	int* arr = new int[1000];
 
+	int* a = new int[2];
+	int* b = new int[5];
+	int* c = new int[7];
+
 	std::cout << "Allocating" << std::endl;
 	std::cout << "Total amount of memory allocated: " << HeapFactory::GetDefaultHeap()->GetAmountAllocated() << std::endl;
+
+	HeapFactory::GetDefaultHeap()->DisplaySizes();
 
 	delete v;
 	v = nullptr;

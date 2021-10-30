@@ -11,6 +11,12 @@ void* operator new(size_t size, Heap* heap) {
 	pHeader->check = deadCode;
 	pHeader->pHeap = heap;
 
+	pHeader->pPrevious = NULL;
+	pHeader->pNext = heap->pHead;
+	if (heap->pHead != NULL)
+		heap->pHead->pPrevious = pHeader;
+	heap->pHead = pHeader;
+
 	pHeader->pHeap->AllocateMemory(size);
 
 	//Get the location of the footer start position

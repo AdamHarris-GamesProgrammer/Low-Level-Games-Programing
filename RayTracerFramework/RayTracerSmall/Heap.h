@@ -1,5 +1,8 @@
 #pragma once
+#include <iostream>
 #define NAMELENGTH 16
+
+struct Header;
 
 class Heap
 {
@@ -11,6 +14,11 @@ public:
 	const char* GetName() const { return _name; }
 
 	void* operator new (size_t size);
+
+	Header* pHead = NULL;
+
+	void DisplaySizes();
+
 private:
 	int _totalAllocated;
 	const char* _name;

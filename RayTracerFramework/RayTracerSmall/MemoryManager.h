@@ -9,8 +9,8 @@ struct Header {
 	int check = deadCode;
 	int allocNumSize;
 	Heap* pHeap;
-	Header* previous;
-	Header* next;
+	Header* pPrevious = NULL;
+	Header* pNext = NULL;
 };
 
 struct Footer {
