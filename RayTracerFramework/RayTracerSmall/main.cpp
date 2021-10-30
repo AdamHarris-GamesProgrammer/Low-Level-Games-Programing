@@ -450,7 +450,6 @@ int main(int argc, char** argv)
 
 	HeapFactory::Init();
 
-
 	int* v = new int;
 
 	//SmoothScaling(configObject);
@@ -466,7 +465,7 @@ int main(int argc, char** argv)
 	std::cout << "Allocating" << std::endl;
 	std::cout << "Total amount of memory allocated: " << HeapFactory::GetDefaultHeap()->GetAmountAllocated() << std::endl;
 
-	HeapFactory::GetDefaultHeap()->DisplaySizes();
+	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
 
 	delete v;
 	v = nullptr;

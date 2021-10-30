@@ -18,6 +18,7 @@ public:
 	Header* pHead = NULL;
 
 	void DisplaySizes();
+	void DisplayDebugInformation();
 
 private:
 	int _totalAllocated;
