@@ -51,11 +51,15 @@ void operator delete(void* pMem) {
 
 	
 	if (pHeader->pNext != NULL) {
-		pHeader->pPrevious->pNext = pHeader->pNext;
+		if(pHeader->pPrevious != NULL) pHeader->pPrevious->pNext = pHeader->pNext;
 		pHeader->pNext->pPrevious = pHeader->pPrevious;
 	}
-	else {
+	else if(pHeader->pPrevious != NULL) {
 		pHeader->pPrevious->pNext = NULL;
+	}
+
+	if (pHeader->pHeap->pHead == pHeader) {
+		pHeader->pHeap->pHead = pHeader->pNext;
 	}
 
 	free(pHeader);

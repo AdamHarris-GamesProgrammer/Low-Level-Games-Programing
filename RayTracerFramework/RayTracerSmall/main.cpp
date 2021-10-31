@@ -442,10 +442,23 @@ int main(int argc, char** argv)
 
 	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
 
-	delete v;
+	delete[] v;
 	v = nullptr;
 
-	std::cout << "Deallocating A Int" << std::endl;
+	delete[] arr;
+	arr = nullptr;
+
+	delete[] c;
+	c = nullptr;
+
+	std::cout << "Deallocating some memory" << std::endl;
+
+	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
+
+	delete[] a;
+	a = nullptr;
+	delete[] b;
+	b = nullptr;
 
 	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
 
