@@ -455,6 +455,7 @@ int main(int argc, char** argv)
 
 	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
 
+	std::cout << "Deallocating all of it" << std::endl;
 	delete[] a;
 	a = nullptr;
 	delete[] b;
