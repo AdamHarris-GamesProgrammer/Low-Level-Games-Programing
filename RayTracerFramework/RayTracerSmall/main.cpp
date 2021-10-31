@@ -426,26 +426,28 @@ int main(int argc, char** argv)
 
 	HeapFactory::Init();
 
-	SmoothScaling(configObject);
+	//SmoothScaling(configObject);
 	//BasicRender(configObject);
 	//SimpleShrinking(configObject);
 
-	/*int* arr = new int[1000];
+	int* v = new int(5);
+
+	int* arr = new int[1000];
 
 	int* a = new int[2];
 	int* b = new int[5];
 	int* c = new int[7];
 
 	std::cout << "Allocating" << std::endl;
-	std::cout << "Total amount of memory allocated: " << HeapFactory::GetDefaultHeap()->GetAmountAllocated() << std::endl;
 
 	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
 
 	delete v;
 	v = nullptr;
 
-	std::cout << "Deallocating" << std::endl;
-	std::cout << "Total amount of memory allocated: " << HeapFactory::GetDefaultHeap()->GetAmountAllocated() << std::endl;*/
+	std::cout << "Deallocating A Int" << std::endl;
+
+	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
 
 	timeToComplete += timer.Mark();
 

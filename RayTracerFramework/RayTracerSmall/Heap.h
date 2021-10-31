@@ -22,6 +22,7 @@ public:
 
 private:
 	int _totalAllocated;
+	int _peak;
 	const char* _name;
 };
 
