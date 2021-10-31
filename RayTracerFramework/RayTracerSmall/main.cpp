@@ -195,7 +195,7 @@ float angle = tan(M_PI * 0.5 * fov / 180.0f);
 struct RenderConfig {
 	unsigned width;
 	unsigned height;
-	unsigned halfWidth;
+	unsigned quarterHeight;
 	unsigned halfHeight;
 	unsigned fullSize;
 	unsigned chunkSize;
@@ -205,10 +205,10 @@ struct RenderConfig {
 	char buffer[28];
 
 	void CalculateValues() {
-		halfWidth = width / 2;
 		halfHeight = height / 2;
+		quarterHeight = halfHeight / 2;
 		fullSize = width * height;
-		chunkSize = halfWidth * halfHeight;
+		chunkSize = width * (height / 4);
 		invWidth = 1 / float(width);
 		invHeight = 1 / float(height);
 		aspectRatio = width / float(height);
@@ -216,14 +216,14 @@ struct RenderConfig {
 };
 
 void RenderSector(
-	const unsigned int startX, 
-	const unsigned int startY, 
-	const unsigned int endX, 
-	const unsigned int endY, 
-	const float& invWidth, 
+	const unsigned int startX,
+	const unsigned int startY,
+	const unsigned int endX,
+	const unsigned int endY,
+	const float& invWidth,
 	const float& invHeight,
 	const float& aspectratio,
-	const std::vector<Sphere>& spheres, Vec3f* image) 
+	const std::vector<Sphere>& spheres, Vec3f* image)
 {
 
 	int index = 0;
@@ -254,66 +254,42 @@ void render(const RenderConfig& config, const std::vector<Sphere>& spheres, int 
 	Vec3f* fourthChunk = new Vec3f[config.chunkSize];
 
 
-	std::thread topLeft = std::thread([&config, &firstChunk, spheres]
+	std::thread topQuarter = std::thread([&config, &firstChunk, spheres]
 		{
-			RenderSector(0, 0, config.halfWidth, config.halfHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(firstChunk));
+			RenderSector(0, 0, config.width, config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(firstChunk));
 		}
 	);
 
 
-	std::thread topRight = std::thread([&config, &secondChunk, spheres]
+	std::thread quarterHalf = std::thread([&config, &secondChunk, spheres]
 		{
-			RenderSector(config.halfWidth, 0, config.width , config.halfHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(secondChunk));
+			RenderSector(0, config.quarterHeight, config.width, config.halfHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(secondChunk));
 		}
 	);
 
-	std::thread bottomLeft = std::thread([&config, &thirdChunk, spheres]
+	std::thread halfQuarter = std::thread([&config, &thirdChunk, spheres]
 		{
-			RenderSector(0, config.halfHeight, config.halfWidth, config.height, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(thirdChunk));
+			RenderSector(0, config.halfHeight, config.width, config.halfHeight + config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(thirdChunk));
 		}
 	);
 
-	std::thread bottomRight = std::thread([&config, &fourthChunk, spheres]
+	std::thread quarterBottom = std::thread([&config, &fourthChunk, spheres]
 		{
-			RenderSector(config.halfWidth, config.halfHeight, config.width, config.height, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(fourthChunk));
+			RenderSector(0, config.halfHeight + config.quarterHeight, config.width, config.height, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(fourthChunk));
 		}
 	);
 
-	topLeft.join();
-	int index = 0;
-	for (unsigned y = 0; y < config.halfHeight; ++y) {
-		for (unsigned x = 0; x < config.halfWidth; ++x) {
-			image[x + config.width * y] = firstChunk[index];
-			index++;
-		}
-	}
+	topQuarter.join();
+	std::copy(firstChunk, firstChunk + config.chunkSize, image);
 
-	topRight.join();
-	index = 0;
-	for (unsigned y = 0; y < config.halfHeight; ++y) {
-		for (unsigned x = config.halfWidth; x < config.width; ++x) {
-			image[x + config.width * y] = secondChunk[index];
-			index++;
-		}
-	}
+	quarterHalf.join();
+	std::copy(secondChunk, secondChunk + config.chunkSize, image + config.chunkSize);
 
-	bottomLeft.join();
-	index = 0;
-	for (unsigned y = config.halfHeight; y < config.height; ++y) {
-		for (unsigned x = 0; x < config.halfWidth; ++x) {
-			image[x + config.width * y] = thirdChunk[index];
-			index++;
-		}
-	}
+	halfQuarter.join();
+	std::copy(thirdChunk, thirdChunk + config.chunkSize, image + config.chunkSize * 2);
 
-	bottomRight.join();
-	index = 0;
-	for (unsigned y = config.halfHeight; y < config.height; ++y) {
-		for (unsigned x = config.halfWidth; x < config.width; ++x) {
-			image[x + config.width * y] = fourthChunk[index];
-			index++;
-		}
-	}
+	quarterBottom.join();
+	std::copy(fourthChunk, fourthChunk + config.chunkSize, image + config.chunkSize * 3);
 
 	delete[] firstChunk;
 	firstChunk = nullptr;
@@ -450,13 +426,11 @@ int main(int argc, char** argv)
 
 	HeapFactory::Init();
 
-	int* v = new int;
-
-	//SmoothScaling(configObject);
+	SmoothScaling(configObject);
 	//BasicRender(configObject);
 	//SimpleShrinking(configObject);
 
-	int* arr = new int[1000];
+	/*int* arr = new int[1000];
 
 	int* a = new int[2];
 	int* b = new int[5];
@@ -471,7 +445,7 @@ int main(int argc, char** argv)
 	v = nullptr;
 
 	std::cout << "Deallocating" << std::endl;
-	std::cout << "Total amount of memory allocated: " << HeapFactory::GetDefaultHeap()->GetAmountAllocated() << std::endl;
+	std::cout << "Total amount of memory allocated: " << HeapFactory::GetDefaultHeap()->GetAmountAllocated() << std::endl;*/
 
 	timeToComplete += timer.Mark();
 
