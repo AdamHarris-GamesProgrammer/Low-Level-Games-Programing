@@ -424,15 +424,15 @@ int main(int argc, char** argv)
 	configObject.height = 480;
 	configObject.CalculateValues();
 
-	HeapFactory::Init();
-
 	//SmoothScaling(configObject);
 	//BasicRender(configObject);
 	//SimpleShrinking(configObject);
 
 	int* v = new int(5);
 
-	int* arr = new int[1000];
+	HeapFactory::CreateHeap("TestHeap");
+	Heap* th = HeapFactory::GetHeap("TestHeap");
+	int* arr = ::new int[1000];
 
 	int* a = new int[2];
 	int* b = new int[5];
@@ -441,6 +441,8 @@ int main(int argc, char** argv)
 	std::cout << "Allocating" << std::endl;
 
 	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
+
+	
 
 	delete[] v;
 	v = nullptr;
