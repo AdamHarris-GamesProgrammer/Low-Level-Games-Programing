@@ -76,14 +76,15 @@ float mix(const float& a, const float& b, const float& mix)
 Vec3f trace(
 	const Vec3f& rayorig,
 	const Vec3f& raydir,
-	const std::vector<Sphere>& spheres,
-	const int& depth)
+	const Sphere* spheres,
+	const int& depth, 
+	const int& size)
 {
 	//if (raydir.length() != 1) std::cerr << "Error " << raydir << std::endl;
 	float tnear = INFINITY;
 	const Sphere* sphere = NULL;
 	// find intersection of this ray with the sphere in the scene
-	std::vector<Sphere*>::size_type size = spheres.size();
+	//std::vector<Sphere*>::size_type size = spheres.size();
 	for (unsigned i = 0; i < size; ++i) {
 		float t0 = INFINITY, t1 = INFINITY;
 		if (spheres[i].intersect(rayorig, raydir, t0, t1)) {
@@ -117,7 +118,7 @@ Vec3f trace(
 		// are already normalized)
 		Vec3f refldir = raydir - nhit * 2 * raydir.dot(nhit);
 		refldir.normalize();
-		Vec3f reflection = trace(phit + nhit * bias, refldir, spheres, depth + 1);
+		Vec3f reflection = trace(phit + nhit * bias, refldir, spheres, depth + 1, size);
 		Vec3f refraction = 0;
 		// if the sphere is also transparent compute refraction ray (transmission)
 		if (sphere->_transparency) {
@@ -126,7 +127,7 @@ Vec3f trace(
 			float k = 1 - eta * eta * (1 - cosi * cosi);
 			Vec3f refrdir = raydir * eta + nhit * (eta * cosi - sqrt(k));
 			refrdir.normalize();
-			refraction = trace(phit - nhit * bias, refrdir, spheres, depth + 1);
+			refraction = trace(phit - nhit * bias, refrdir, spheres, depth + 1, size);
 		}
 		// the result is a mix of reflection and refraction (if the sphere is transparent)
 		surfaceColor = (
@@ -193,7 +194,7 @@ void RenderSector(
 	const float& invWidth,
 	const float& invHeight,
 	const float& aspectratio,
-	const std::vector<Sphere>& spheres, Vec3f* image)
+	const Sphere* spheres, Vec3f* image, const int& size)
 {
 
 	int index = 0;
@@ -203,7 +204,7 @@ void RenderSector(
 			float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
 			Vec3f raydir(xx, yy, -1);
 			raydir.normalize();
-			image[index] = trace(Vec3f(0), raydir, spheres, 0);
+			image[index] = trace(Vec3f(0), raydir, spheres, 0, size);
 			index++;
 		}
 	}
@@ -223,7 +224,7 @@ std::ostream& operator<<(std::ostream& out, Sphere sphere) {
 // trace it and return a color. If the ray hits a sphere, we return the color of the
 // sphere at the intersection point, else we return the background color.
 //[/comment]
-void render(const RenderConfig& config, const std::vector<Sphere>& spheres, int iteration)
+void render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
 {
 	Vec3f* image = new Vec3f[config.fullSize];
 	Vec3f* firstChunk = new Vec3f[config.chunkSize];
@@ -232,28 +233,28 @@ void render(const RenderConfig& config, const std::vector<Sphere>& spheres, int 
 	Vec3f* fourthChunk = new Vec3f[config.chunkSize];
 
 
-	std::thread topQuarter = std::thread([&config, &firstChunk, spheres]
+	std::thread topQuarter = std::thread([&config, &firstChunk, spheres, size]
 		{
-			RenderSector(0, 0, config.width, config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(firstChunk));
+			RenderSector(0, 0, config.width, config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(firstChunk), size);
 		}
 	);
 
 
-	std::thread quarterHalf = std::thread([&config, &secondChunk, spheres]
+	std::thread quarterHalf = std::thread([&config, &secondChunk, spheres, size]
 		{
-			RenderSector(0, config.quarterHeight, config.width, config.halfHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(secondChunk));
+			RenderSector(0, config.quarterHeight, config.width, config.halfHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(secondChunk), size);
 		}
 	);
 
-	std::thread halfQuarter = std::thread([&config, &thirdChunk, spheres]
+	std::thread halfQuarter = std::thread([&config, &thirdChunk, spheres, size]
 		{
-			RenderSector(0, config.halfHeight, config.width, config.halfHeight + config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(thirdChunk));
+			RenderSector(0, config.halfHeight, config.width, config.halfHeight + config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(thirdChunk), size);
 		}
 	);
 
-	std::thread quarterBottom = std::thread([&config, &fourthChunk, spheres]
+	std::thread quarterBottom = std::thread([&config, &fourthChunk, spheres, size]
 		{
-			RenderSector(0, config.halfHeight + config.quarterHeight, config.width, config.height, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(fourthChunk));
+			RenderSector(0, config.halfHeight + config.quarterHeight, config.width, config.height, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(fourthChunk), size);
 		}
 	);
 
@@ -302,68 +303,68 @@ void render(const RenderConfig& config, const std::vector<Sphere>& spheres, int 
 
 void BasicRender(const RenderConfig& config)
 {
-	std::vector<Sphere> spheres;
+	Sphere* spheres = new Sphere[4];
 	// Vector structure for Sphere (position, radius, surface color, reflectivity, transparency, emission color)
 
-	spheres.push_back(Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 0, 0.0));
-	spheres.push_back(Sphere(Vec3f(0.0, 0, -20), 4, Vec3f(1.00, 0.32, 0.36), 1, 0.5)); // The radius paramter is the value we will change
-	spheres.push_back(Sphere(Vec3f(5.0, -1, -15), 2, Vec3f(0.90, 0.76, 0.46), 1, 0.0));
-	spheres.push_back(Sphere(Vec3f(5.0, 0, -25), 3, Vec3f(0.65, 0.77, 0.97), 1, 0.0));
+	spheres[0] = Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 0, 0.0);
+	spheres[1] = Sphere(Vec3f(0.0, 0, -20), 4, Vec3f(1.00, 0.32, 0.36), 1, 0.5); // The radius paramter is the value we will change
+	spheres[2] = Sphere(Vec3f(5.0, -1, -15), 2, Vec3f(0.90, 0.76, 0.46), 1, 0.0);
+	spheres[3] = Sphere(Vec3f(5.0, 0, -25), 3, Vec3f(0.65, 0.77, 0.97), 1, 0.0);
 
 	// This creates a file, titled 1.ppm in the current working directory
-	render(config, spheres, 1);
+	render(config, spheres, 1, 4);
+
+	delete[] spheres;
+	spheres = nullptr;
 
 }
 
 void SimpleShrinking(const RenderConfig& config)
 {
-	std::vector<Sphere> spheres;
+	Sphere* spheres = new Sphere[4];
 	// Vector structure for Sphere (position, radius, surface color, reflectivity, transparency, emission color)
+
+	spheres[0] = Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 0, 0.0);
+	spheres[1] = Sphere(Vec3f(0.0, 0, -20), 4, Vec3f(1.00, 0.32, 0.36), 1, 0.5); // The radius paramter is the value we will change
+	spheres[2] = Sphere(Vec3f(5.0, -1, -15), 2, Vec3f(0.90, 0.76, 0.46), 1, 0.0);
+	spheres[3] = Sphere(Vec3f(5.0, 0, -25), 3, Vec3f(0.65, 0.77, 0.97), 1, 0.0);
 
 	for (int i = 0; i < 4; i++)
 	{
 		if (i == 0)
 		{
-			spheres.push_back(Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 0, 0.0));
-			spheres.push_back(Sphere(Vec3f(0.0, 0, -20), 4, Vec3f(1.00, 0.32, 0.36), 1, 0.5)); // The radius paramter is the value we will change
-			spheres.push_back(Sphere(Vec3f(5.0, -1, -15), 2, Vec3f(0.90, 0.76, 0.46), 1, 0.0));
-			spheres.push_back(Sphere(Vec3f(5.0, 0, -25), 3, Vec3f(0.65, 0.77, 0.97), 1, 0.0));
-
+			spheres[1]._radius = 4;
+			spheres[1]._radiusSqr = 4 * 4;
 		}
 		else if (i == 1)
 		{
-			spheres.push_back(Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 0, 0.0));
-			spheres.push_back(Sphere(Vec3f(0.0, 0, -20), 3, Vec3f(1.00, 0.32, 0.36), 1, 0.5)); // Radius--
-			spheres.push_back(Sphere(Vec3f(5.0, -1, -15), 2, Vec3f(0.90, 0.76, 0.46), 1, 0.0));
-			spheres.push_back(Sphere(Vec3f(5.0, 0, -25), 3, Vec3f(0.65, 0.77, 0.97), 1, 0.0));
+			spheres[1]._radius = 3;
+			spheres[1]._radiusSqr = 3 * 3;
 		}
 		else if (i == 2)
 		{
-			spheres.push_back(Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 0, 0.0));
-			spheres.push_back(Sphere(Vec3f(0.0, 0, -20), 2, Vec3f(1.00, 0.32, 0.36), 1, 0.5)); // Radius--
-			spheres.push_back(Sphere(Vec3f(5.0, -1, -15), 2, Vec3f(0.90, 0.76, 0.46), 1, 0.0));
-			spheres.push_back(Sphere(Vec3f(5.0, 0, -25), 3, Vec3f(0.65, 0.77, 0.97), 1, 0.0));
+			spheres[1]._radius = 2;
+			spheres[1]._radiusSqr = 2 * 2;
 		}
 		else if (i == 3)
 		{
-			spheres.push_back(Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 0, 0.0));
-			spheres.push_back(Sphere(Vec3f(0.0, 0, -20), 1, Vec3f(1.00, 0.32, 0.36), 1, 0.5)); // Radius--
-			spheres.push_back(Sphere(Vec3f(5.0, -1, -15), 2, Vec3f(0.90, 0.76, 0.46), 1, 0.0));
-			spheres.push_back(Sphere(Vec3f(5.0, 0, -25), 3, Vec3f(0.65, 0.77, 0.97), 1, 0.0));
+			spheres[1]._radius = 1;
+			spheres[1]._radiusSqr = 1 * 1;
 		}
 
-		render(config, spheres, i);
+		render(config, spheres, i, 4);
 		// Dont forget to clear the Vector holding the spheres.
-		spheres.clear();
 	}
+
+	delete[] spheres;
+	spheres = nullptr;
 }
 
 void SmoothScaling(const RenderConfig& config)
 {
-	std::vector<Sphere> spheres;
+	Sphere* spheres = new Sphere[4];
 	// Vector structure for Sphere (position, radius, surface color, reflectivity, transparency, emission color)
 
-	spheres.resize(4);
 	spheres[0] = Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 0, 0.0);
 	spheres[1] = Sphere(Vec3f(0.0, 0, -20), 0 / 100, Vec3f(1.00, 0.32, 0.36), 1, 0.5); // Radius++ change here
 	spheres[2] = Sphere(Vec3f(5.0, -1, -15), 2, Vec3f(0.90, 0.76, 0.46), 1, 0.0);
@@ -375,11 +376,18 @@ void SmoothScaling(const RenderConfig& config)
 		spheres[1]._radius = radius;
 		spheres[1]._radiusSqr = radius * radius;
 
-		render(config, spheres, r);
+		render(config, spheres, r, 4);
 		std::cout << "Rendered and saved spheres" << r << ".ppm" << std::endl;
 	}
 
-	spheres.clear();
+	delete[] spheres;
+	spheres = nullptr;
+}
+
+void RenderFromJSONFile(const JSONSphereInfo& info, const RenderConfig& config) {
+
+
+
 }
 
 //[comment]
@@ -411,7 +419,7 @@ int main(int argc, char** argv)
 		
 	}
 
-	//SmoothScaling(configObject);
+	SmoothScaling(configObject);
 	//BasicRender(configObject);
 	//SimpleShrinking(configObject);
 
