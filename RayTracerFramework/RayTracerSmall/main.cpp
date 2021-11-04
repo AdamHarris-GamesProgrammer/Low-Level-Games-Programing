@@ -286,19 +286,19 @@ void render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	char* filename = (char*)tempString.c_str();
 
 	std::stringstream fileStream;
-	fileStream << "P6\n" << config.width << " " << config.height << "\n255\n";
-	for (unsigned i = 0; i < config.fullSize; ++i) {
-		fileStream << (unsigned char)(std::min(1.0f, image[i].x) * 255) <<
-			(unsigned char)(std::min(1.0f, image[i].y) * 255) <<
-			(unsigned char)(std::min(1.0f, image[i].z) * 255);
-	}
+fileStream << "P6\n" << config.width << " " << config.height << "\n255\n";
+for (unsigned i = 0; i < config.fullSize; ++i) {
+	fileStream << (unsigned char)(std::min(1.0f, image[i].x) * 255) <<
+		(unsigned char)(std::min(1.0f, image[i].y) * 255) <<
+		(unsigned char)(std::min(1.0f, image[i].z) * 255);
+}
 
-	std::ofstream ofs(filename, std::ios::out | std::ios::binary);
-	ofs << fileStream.str();
-	ofs.close();
+std::ofstream ofs(filename, std::ios::out | std::ios::binary);
+ofs << fileStream.str();
+ofs.close();
 
-	delete[] image;
-	image = nullptr;
+delete[] image;
+image = nullptr;
 }
 
 void BasicRender(const RenderConfig& config)
@@ -386,8 +386,14 @@ void SmoothScaling(const RenderConfig& config)
 
 void RenderFromJSONFile(const JSONSphereInfo& info, const RenderConfig& config) {
 
+	for (int i = 0; i < info.frameCount; i++) {
+		for (int j = 0; j < info.sphereCount; j++) {
+			info.sphereArr[j]._center += info.sphereMovementsPerFrame[j];
+		}
 
-
+		render(config, info.sphereArr, i, info.sphereCount);
+		std::cout << "Rendered and saved spheres" << i << ".ppm" << std::endl;
+	}
 }
 
 //[comment]
@@ -419,9 +425,10 @@ int main(int argc, char** argv)
 		
 	}
 
-	SmoothScaling(configObject);
+	//SmoothScaling(configObject);
 	//BasicRender(configObject);
 	//SimpleShrinking(configObject);
+	RenderFromJSONFile(info, configObject);
 
 	//int* v = new int(5);
 
