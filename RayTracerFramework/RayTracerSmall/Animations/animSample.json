@@ -1,0 +1,52 @@
+{
+  "frameCount": 200,
+  "sphereCount": 5,
+  "spheres": [
+    {
+      "startPos": [ 0.0, 0.0, -5.0 ],
+      "endPos": [ 10.0, 0.0, -5.0 ],
+      "radius": 5.0,
+      "surfaceColor": [ 1.0, 0.0, 0.0 ],
+      "reflection": 0.0,
+      "transparency": 1.0,
+      "emmisionColor": [ 0.8, 0.0, 0.0 ]
+    },
+    {
+      "startPos": [ 0.0, 6.0, -5.0 ],
+      "endPos": [ 8.0, 0.0, -5.0 ],
+      "radius": 5.0,
+      "surfaceColor": [ 1.0, 0.0, 0.0 ],
+      "reflection": 0.0,
+      "transparency": 1.0,
+      "emmisionColor": [ 0.8, 0.0, 0.0 ]
+    },
+    {
+      "startPos": [ 0.0, -6.0, -5.0 ],
+      "endPos": [ 6.0, 0.0, -5.0 ],
+      "radius": 5.0,
+      "surfaceColor": [ 1.0, 0.0, 0.0 ],
+      "reflection": 0.0,
+      "transparency": 1.0,
+      "emmisionColor": [ 0.8, 0.0, 0.0 ]
+    },
+    {
+      "startPos": [ 0.0, 10.0, -5.0 ],
+      "endPos": [ 4.0, 0.0, -5.0 ],
+      "radius": 5.0,
+      "surfaceColor": [ 1.0, 0.0, 0.0 ],
+      "reflection": 0.0,
+      "transparency": 1.0,
+      "emmisionColor": [ 0.8, 0.0, 0.0 ]
+    },
+    {
+      "startPos": [ 0.0, -10.0, -5.0 ],
+      "endPos": [ 2.0, 0.0, -5.0 ],
+      "radius": 5.0,
+      "surfaceColor": [ 1.0, 0.0, 0.0 ],
+      "reflection": 0.0,
+      "transparency": 1.0,
+      "emmisionColor": [ 0.8, 0.0, 0.0 ]
+    }
+  ],
+  "version": "1.0"
+}

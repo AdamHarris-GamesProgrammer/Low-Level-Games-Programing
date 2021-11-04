@@ -36,9 +36,11 @@
 
 #include "Timer.h"
 #include "Vec3.h"
+#include "Sphere.h"
 #include "MemoryManager.h"
 #include "HeapFactory.h"
 #include <thread>
+
 
 #if defined __linux__ || defined __APPLE__
 // "Compiled for Linux
@@ -48,41 +50,7 @@
 #define INFINITY 1e8
 #endif
 
-class Sphere
-{
-public:
-	Vec3f _center;                           /// position of the sphere
-	float _radius, _radiusSqr;                  /// sphere radius and radius^2
-	Vec3f _surfaceColor, _emissionColor;      /// surface color and emission (light)
-	float _transparency, _reflection;		/// surface transparency and reflectivity
-	Sphere() = default;
-	Sphere(
-		const Vec3f& center,
-		const float& radius,
-		const Vec3f& surfaceColor,
-		const float& reflection = 0,
-		const float& transparency = 0,
-		const Vec3f& emmisionColor = 0) :
-		_center(center), _radius(radius), _radiusSqr(radius* radius), _surfaceColor(surfaceColor), _emissionColor(emmisionColor),
-		_transparency(transparency), _reflection(reflection) { }
 
-	//[comment]
-	// Compute a ray-sphere intersection using the geometric solution
-	//[/comment]
-	bool intersect(const Vec3f& rayorig, const Vec3f& raydir, float& t0, float& t1) const
-	{
-		Vec3f l = _center - rayorig;
-		float tca = l.dot(raydir);
-		if (tca < 0) return false;
-		float d2 = l.dot(l) - tca * tca;
-		if (d2 > _radiusSqr) return false;
-		float thc = sqrt(_radiusSqr - d2);
-		t0 = tca - thc;
-		t1 = tca + thc;
-
-		return true;
-	}
-};
 
 //[comment]
 // This variable controls the maximum recursion depth
@@ -125,6 +93,7 @@ Vec3f trace(
 			}
 		}
 	}
+
 	// if there's no intersection return black or background color
 	if (!sphere) return Vec3f(2);
 
@@ -281,22 +250,21 @@ void render(const RenderConfig& config, const std::vector<Sphere>& spheres, int 
 
 	topQuarter.join();
 	std::copy(firstChunk, firstChunk + config.chunkSize, image);
+	delete[] firstChunk;
+	firstChunk = nullptr;
 
 	quarterHalf.join();
 	std::copy(secondChunk, secondChunk + config.chunkSize, image + config.chunkSize);
+	delete[] secondChunk;
+	secondChunk = nullptr;
 
 	halfQuarter.join();
 	std::copy(thirdChunk, thirdChunk + config.chunkSize, image + config.chunkSize * 2);
+	delete[] thirdChunk;
+	thirdChunk = nullptr;
 
 	quarterBottom.join();
 	std::copy(fourthChunk, fourthChunk + config.chunkSize, image + config.chunkSize * 3);
-
-	delete[] firstChunk;
-	firstChunk = nullptr;
-	delete[] secondChunk;
-	secondChunk = nullptr;
-	delete[] thirdChunk;
-	thirdChunk = nullptr;
 	delete[] fourthChunk;
 	fourthChunk = nullptr;
 
@@ -424,55 +392,52 @@ int main(int argc, char** argv)
 	configObject.height = 480;
 	configObject.CalculateValues();
 
-	//SmoothScaling(configObject);
+	SmoothScaling(configObject);
 	//BasicRender(configObject);
 	//SimpleShrinking(configObject);
 
-	int* v = new int(5);
+	//int* v = new int(5);
 
-	HeapFactory::CreateHeap("TestHeap");
-	Heap* th = HeapFactory::GetHeap("TestHeap");
-	int* arr = ::new int[1000];
+	//HeapFactory::CreateHeap("TestHeap");
+	//Heap* th = HeapFactory::GetHeap("TestHeap");
+	//int* arr = ::new int[1000];
 
-	int* a = new int[2];
-	int* b = new int[5];
-	int* c = new int[7];
+	//int* a = new int[2];
+	//int* b = new int[5];
+	//int* c = new int[7];
 
-	std::cout << "Allocating" << std::endl;
+	//std::cout << "Allocating" << std::endl;
 
-	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
+	//HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
 
-	
+	//
 
-	delete[] v;
-	v = nullptr;
+	//delete[] v;
+	//v = nullptr;
 
-	delete[] arr;
-	arr = nullptr;
+	//delete[] arr;
+	//arr = nullptr;
 
-	delete[] c;
-	c = nullptr;
+	//delete[] c;
+	//c = nullptr;
 
-	std::cout << "Deallocating some memory" << std::endl;
+	//std::cout << "Deallocating some memory" << std::endl;
 
-	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
+	//HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
 
-	std::cout << "Deallocating all of it" << std::endl;
-	delete[] a;
-	a = nullptr;
-	delete[] b;
-	b = nullptr;
+	//std::cout << "Deallocating all of it" << std::endl;
+	//delete[] a;
+	//a = nullptr;
+	//delete[] b;
+	//b = nullptr;
 
-	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
+	//HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
 
 	timeToComplete += timer.Mark();
 
 	std::cout << "Time to complete: " << timeToComplete << std::endl;
 
-	//BasicRender();
-	//SimpleShrinking();
-	//SmoothScaling();
+	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
 
 	return 0;
 }
-
