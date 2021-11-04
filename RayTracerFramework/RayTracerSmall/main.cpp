@@ -40,6 +40,7 @@
 #include "MemoryManager.h"
 #include "HeapFactory.h"
 #include <thread>
+#include "JSONReader.h"
 
 
 #if defined __linux__ || defined __APPLE__
@@ -208,6 +209,14 @@ void RenderSector(
 	}
 }
 
+std::ostream& operator<<(std::ostream& out, Sphere sphere) {
+	out << "SPHERE INFO\n " << "Position: " << sphere._center
+		<< "\nRadius: " << sphere._radius << "\nSurface Colour: " << sphere._surfaceColor
+		<< "\nEmmision Colour: " << sphere._emissionColor << "\nTransparency: " << sphere._transparency
+		<< "\nReflection: " << sphere._reflection << "\n";
+
+	return out;
+}
 
 //[comment]
 // Main rendering function. We compute a camera ray for each pixel of the image
@@ -392,7 +401,17 @@ int main(int argc, char** argv)
 	configObject.height = 480;
 	configObject.CalculateValues();
 
-	SmoothScaling(configObject);
+
+	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
+
+	for (int i = 0; i < info.sphereCount; i++) {
+		std::cout << info.sphereArr[i];
+		std::cout << "Sphere end position: " << info.sphereEndPositions[i] << std::endl;
+		std::cout << "Sphere movement per frame: " << info.sphereMovementsPerFrame[i] << std::endl;
+		
+	}
+
+	//SmoothScaling(configObject);
 	//BasicRender(configObject);
 	//SimpleShrinking(configObject);
 

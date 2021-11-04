@@ -29,7 +29,7 @@ public:
 	inline T length() const { return sqrt(length2()); }
 	friend std::ostream& operator << (std::ostream& os, const Vec3<T>& v)
 	{
-		os << "[" << v.x << " " << v.y << " " << v.z << "]";
+		os << "[" << v.x << ", " << v.y << ", " << v.z << "]";
 		return os;
 	}
 };

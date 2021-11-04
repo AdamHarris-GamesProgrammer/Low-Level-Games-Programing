@@ -7,7 +7,7 @@
       "endPos": [ 10.0, 0.0, -5.0 ],
       "radius": 5.0,
       "surfaceColor": [ 1.0, 0.0, 0.0 ],
-      "reflection": 0.0,
+      "reflection": 0.2,
       "transparency": 1.0,
       "emmisionColor": [ 0.8, 0.0, 0.0 ]
     },
