@@ -21,25 +21,22 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // [/ignore]
 
-#include <stdlib.h>
-#include <cstdio>
-#include <cmath>
 #include <fstream>
-#include <vector>
 #include <iostream>
 #include <cassert>
+#include <thread>
+
 // Windows only
 #include <algorithm>
 #include <sstream>
-#include <string.h>
-#include "Heap.h"
+#include <string>
 
+#include "Heap.h"
 #include "Timer.h"
 #include "Vec3.h"
 #include "Sphere.h"
 #include "MemoryManager.h"
 #include "HeapFactory.h"
-#include <thread>
 #include "JSONReader.h"
 
 
@@ -82,7 +79,7 @@ Vec3f trace(
 {
 	//if (raydir.length() != 1) std::cerr << "Error " << raydir << std::endl;
 	float tnear = INFINITY;
-	const Sphere* sphere = NULL;
+	const Sphere* sphere = nullptr;
 	// find intersection of this ray with the sphere in the scene
 	//std::vector<Sphere*>::size_type size = spheres.size();
 	for (unsigned i = 0; i < size; ++i) {
@@ -99,7 +96,7 @@ Vec3f trace(
 	// if there's no intersection return black or background color
 	if (!sphere) return Vec3f(2);
 
-	Vec3f surfaceColor = 0; // color of the ray/surfaceof the object intersected by the ray
+	Vec3f surfaceColor = 0; // color of the ray/surface of the object intersected by the ray
 	Vec3f phit = rayorig + raydir * tnear; // point of intersection
 	Vec3f nhit = phit - sphere->_center; // normal at the intersection point
 	nhit.normalize(); // normalize normal direction
@@ -416,19 +413,13 @@ int main(int argc, char** argv)
 	configObject.CalculateValues();
 
 
-	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
-	for (int i = 0; i < info.sphereCount; i++) {
-		std::cout << info.sphereArr[i];
-		std::cout << "Sphere end position: " << info.sphereEndPositions[i] << std::endl;
-		std::cout << "Sphere movement per frame: " << info.sphereMovementsPerFrame[i] << std::endl;
-		
-	}
-
-	//SmoothScaling(configObject);
+	SmoothScaling(configObject);
 	//BasicRender(configObject);
 	//SimpleShrinking(configObject);
-	RenderFromJSONFile(info, configObject);
+
+	//JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
+	//RenderFromJSONFile(info, configObject);
 
 	//int* v = new int(5);
 
