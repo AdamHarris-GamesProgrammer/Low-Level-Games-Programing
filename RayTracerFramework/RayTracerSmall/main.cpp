@@ -38,7 +38,7 @@
 #include "MemoryManager.h"
 #include "HeapFactory.h"
 #include "JSONReader.h"
-
+#include "MemPool.h"
 
 #if defined __linux__ || defined __APPLE__
 // "Compiled for Linux
@@ -48,7 +48,7 @@
 #define INFINITY 1e8
 #endif
 
-
+MemPool* pool;
 
 //[comment]
 // This variable controls the maximum recursion depth
@@ -74,7 +74,7 @@ Vec3f trace(
 	const Vec3f& rayorig,
 	const Vec3f& raydir,
 	const Sphere* spheres,
-	const int& depth, 
+	const int& depth,
 	const int& size)
 {
 	//if (raydir.length() != 1) std::cerr << "Error " << raydir << std::endl;
@@ -223,11 +223,11 @@ std::ostream& operator<<(std::ostream& out, Sphere sphere) {
 //[/comment]
 void render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
 {
-	Vec3f* image = new Vec3f[config.fullSize];
-	Vec3f* firstChunk = new Vec3f[config.chunkSize];
-	Vec3f* secondChunk = new Vec3f[config.chunkSize];
-	Vec3f* thirdChunk = new Vec3f[config.chunkSize];
-	Vec3f* fourthChunk = new Vec3f[config.chunkSize];
+	Vec3f* image = (Vec3f*)pool->Alloc(config.fullSize * sizeof(Vec3f));
+	Vec3f* firstChunk = (Vec3f*)pool->Alloc(config.chunkSize * sizeof(Vec3f));
+	Vec3f* secondChunk = (Vec3f*)pool->Alloc(config.chunkSize * sizeof(Vec3f));
+	Vec3f* thirdChunk = (Vec3f*)pool->Alloc(config.chunkSize * sizeof(Vec3f));
+	Vec3f* fourthChunk = (Vec3f*)pool->Alloc(config.chunkSize * sizeof(Vec3f));
 
 
 	std::thread topQuarter = std::thread([&config, &firstChunk, spheres, size]
@@ -257,24 +257,19 @@ void render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 
 	topQuarter.join();
 	std::copy(firstChunk, firstChunk + config.chunkSize, image);
-	delete[] firstChunk;
-	firstChunk = nullptr;
+	pool->Free(firstChunk);
 
 	quarterHalf.join();
 	std::copy(secondChunk, secondChunk + config.chunkSize, image + config.chunkSize);
-	delete[] secondChunk;
-	secondChunk = nullptr;
+	pool->Free(secondChunk);
 
 	halfQuarter.join();
 	std::copy(thirdChunk, thirdChunk + config.chunkSize, image + config.chunkSize * 2);
-	delete[] thirdChunk;
-	thirdChunk = nullptr;
+	pool->Free(thirdChunk);
 
 	quarterBottom.join();
 	std::copy(fourthChunk, fourthChunk + config.chunkSize, image + config.chunkSize * 3);
-	delete[] fourthChunk;
-	fourthChunk = nullptr;
-
+	pool->Free(fourthChunk);
 
 	// Save result to a PPM image (keep these flags if you compile under Windows)
 	std::stringstream ss;
@@ -283,19 +278,18 @@ void render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	char* filename = (char*)tempString.c_str();
 
 	std::stringstream fileStream;
-fileStream << "P6\n" << config.width << " " << config.height << "\n255\n";
-for (unsigned i = 0; i < config.fullSize; ++i) {
-	fileStream << (unsigned char)(std::min(1.0f, image[i].x) * 255) <<
-		(unsigned char)(std::min(1.0f, image[i].y) * 255) <<
-		(unsigned char)(std::min(1.0f, image[i].z) * 255);
-}
+	fileStream << "P6\n" << config.width << " " << config.height << "\n255\n";
+	for (unsigned i = 0; i < config.fullSize; ++i) {
+		fileStream << (unsigned char)(std::min(1.0f, image[i].x) * 255) <<
+			(unsigned char)(std::min(1.0f, image[i].y) * 255) <<
+			(unsigned char)(std::min(1.0f, image[i].z) * 255);
+	}
 
-std::ofstream ofs(filename, std::ios::out | std::ios::binary);
-ofs << fileStream.str();
-ofs.close();
+	std::ofstream ofs(filename, std::ios::out | std::ios::binary);
+	ofs << fileStream.str();
+	ofs.close();
 
-delete[] image;
-image = nullptr;
+	pool->Free(image);
 }
 
 void BasicRender(const RenderConfig& config)
@@ -412,7 +406,7 @@ int main(int argc, char** argv)
 	configObject.height = 480;
 	configObject.CalculateValues();
 
-
+	pool = new MemPool(2, sizeof(Vec3f) * (640 * 480));
 
 	SmoothScaling(configObject);
 	//BasicRender(configObject);
@@ -460,7 +454,11 @@ int main(int argc, char** argv)
 
 	timeToComplete += timer.Mark();
 
+
 	std::cout << "Time to complete: " << timeToComplete << std::endl;
+
+	delete pool;
+	pool = nullptr;
 
 	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
 
