@@ -38,7 +38,7 @@
 #include "MemoryManager.h"
 #include "HeapFactory.h"
 #include "JSONReader.h"
-#include "MemPool.h"
+#include "MemoryPool.h"
 
 #if defined __linux__ || defined __APPLE__
 // "Compiled for Linux
@@ -48,8 +48,8 @@
 #define INFINITY 1e8
 #endif
 
-MemPool* chunkPool;
-MemPool* imagePool;
+MemoryPool* chunkPool;
+MemoryPool* imagePool;
 
 //[comment]
 // This variable controls the maximum recursion depth
@@ -133,7 +133,7 @@ Vec3f trace(
 			refraction * (1 - fresneleffect) * sphere->_transparency) * sphere->_surfaceColor;
 	}
 	else {
-		// it's a diffuse object, no need to raytrace any further
+		// it's a diffuse object, no need to ray trace any further
 		for (unsigned i = size - 1; i != 0; --i) {
 			if (spheres[i]._emissionColor.x > 0) {
 				// this is a light
@@ -185,10 +185,10 @@ struct RenderConfig {
 };
 
 void RenderSector(
-	const unsigned int startX,
-	const unsigned int startY,
-	const unsigned int endX,
-	const unsigned int endY,
+	const unsigned int& startX,
+	const unsigned int& startY,
+	const unsigned int& endX,
+	const unsigned int& endY,
 	const float& invWidth,
 	const float& invHeight,
 	const float& aspectratio,
@@ -224,11 +224,11 @@ std::ostream& operator<<(std::ostream& out, Sphere sphere) {
 //[/comment]
 void render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
 {
-	Vec3f* image = (Vec3f*)imagePool->Alloc(config.fullSize * sizeof(Vec3f));
-	Vec3f* firstChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
-	Vec3f* secondChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
-	Vec3f* thirdChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
-	Vec3f* fourthChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
+	Vec3f* image =			(Vec3f*)imagePool->Alloc(config.fullSize * sizeof(Vec3f));
+	Vec3f* firstChunk =		(Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
+	Vec3f* secondChunk =	(Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
+	Vec3f* thirdChunk =		(Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
+	Vec3f* fourthChunk =	(Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
 
 
 	std::thread topQuarter = std::thread([&config, &firstChunk, spheres, size]
@@ -407,8 +407,11 @@ int main(int argc, char** argv)
 	configObject.height = 480;
 	configObject.CalculateValues();
 
-	chunkPool = new MemPool(4, sizeof(Vec3f) * configObject.chunkSize);
-	imagePool = new MemPool(1, sizeof(Vec3f) * configObject.fullSize);
+	//Allocate a memory pool for the four image chunks 
+	chunkPool = new MemoryPool(4, sizeof(Vec3f) * configObject.chunkSize);
+
+	//Allocate a memory pool for the image itself
+	imagePool = new MemoryPool(1, sizeof(Vec3f) * configObject.fullSize);
 
 	SmoothScaling(configObject);
 	//BasicRender(configObject);
@@ -431,14 +434,10 @@ int main(int argc, char** argv)
 
 	//HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
 
-	//
-
 	//delete[] v;
 	//v = nullptr;
-
 	//delete[] arr;
 	//arr = nullptr;
-
 	//delete[] c;
 	//c = nullptr;
 

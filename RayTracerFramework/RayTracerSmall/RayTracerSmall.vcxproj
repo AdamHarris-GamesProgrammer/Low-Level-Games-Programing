@@ -157,7 +157,7 @@
     <ClInclude Include="HeapFactory.h" />
     <ClInclude Include="JSONReader.h" />
     <ClInclude Include="MemoryManager.h" />
-    <ClInclude Include="MemPool.h" />
+    <ClInclude Include="MemoryPool.h" />
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="Timer.h" />
     <ClInclude Include="Vec3.h" />

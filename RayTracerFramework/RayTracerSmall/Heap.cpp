@@ -30,19 +30,6 @@ void* Heap::operator new(size_t size)
 	return pMem;
 }
 
-void Heap::DisplaySizes()
-{
-	Header* pCurrent = pHead;
-	while (pCurrent != NULL)
-	{
-		
-		std::cout << pCurrent->size << " ";
-		pCurrent = pCurrent->pNext;
-	}
-
-	std::cout << std::endl;
-}
-
 void Heap::DisplayDebugInformation()
 {
 	std::cout << "Name: " << _name << std::endl;
