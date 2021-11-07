@@ -11,17 +11,20 @@ public:
 		_poolSize(noOfChunks* (sizeOfChunks + sizeof(struct Chunk))),
 		_chunkSize(sizeOfChunks)
 	{
-		_pMemBlock = malloc(_poolSize); //Allocate a memory block.
+		_pMemBlock = malloc(_poolSize); //Allocates the memory block.
+		//Can fail if the pool size is too large
+
 		if (_pMemBlock)
 		{
 			for (unsigned long i = 0; i < noOfChunks; i++)
 			{
-				struct Chunk* pCurUnit = (struct Chunk*)((char*)_pMemBlock + i * (sizeOfChunks + sizeof(struct Chunk)));
+				//Linked list 
+				Chunk* pCurUnit = (Chunk*)((char*)_pMemBlock + i * (sizeOfChunks + sizeof(Chunk)));
 
 				pCurUnit->pPrev = nullptr;
-				pCurUnit->pNext = _pFreeMemBlock;    //Insert the new unit at head.
+				pCurUnit->pNext = _pFreeMemBlock;  
 
-				if (nullptr != _pFreeMemBlock)
+				if (_pFreeMemBlock != nullptr)
 				{
 					_pFreeMemBlock->pPrev = pCurUnit;
 				}
@@ -32,6 +35,8 @@ public:
 
 	~MemPool()
 	{
+		std::cout << "Deallocating all bytes" << std::endl;
+		//free all pooled memory
 		free(_pMemBlock);
 	}
 
@@ -39,8 +44,10 @@ public:
 	// It will call system function.
 	void* Alloc(unsigned long requestedBytes)
 	{
-		if (requestedBytes > _chunkSize ||
-			_pMemBlock == nullptr || _pFreeMemBlock == nullptr)
+		std::cout << "Allocating " << requestedBytes << std::endl;
+
+		//if the requested bytes is larger than what we can allocate
+		if (requestedBytes > _chunkSize || _pMemBlock == nullptr || _pFreeMemBlock == nullptr)
 		{
 			return malloc(requestedBytes);
 		}
@@ -95,23 +102,24 @@ public:
 		}
 		else
 		{
+			std::cout << "Deallocating bytes" << std::endl;
 			free(p);
 		}
 	}
 
 private:
-	//This is essentially a doubly linked list
+	//This is a doubly linked list
 	struct Chunk
 	{
 		struct Chunk* pPrev, * pNext;
 	};
 
 	// Manage all Chunks with linked lists
-	struct Chunk* _pAllocatedMemBlock; //Pointer to the start of the allocated memory block
-	struct Chunk* _pFreeMemBlock;      //Pointer to the start of the free memory block
+	struct Chunk* _pAllocatedMemBlock; //Linked list of allocated memory blocks
+	struct Chunk* _pFreeMemBlock;      //linked list of free memory blocks
 
 	void* _pMemBlock;  //The start address of the memory pool.
 
-	unsigned long    _chunkSize;
-	unsigned long    _poolSize; //Memory pool size. Memory pool is make of memory unit.
+	unsigned long _chunkSize;//Size of one memory chunk
+	unsigned long _poolSize; //Memory pool size. Memory pool is make of memory unit.
 };

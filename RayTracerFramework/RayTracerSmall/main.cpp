@@ -48,7 +48,8 @@
 #define INFINITY 1e8
 #endif
 
-MemPool* pool;
+MemPool* chunkPool;
+MemPool* imagePool;
 
 //[comment]
 // This variable controls the maximum recursion depth
@@ -223,11 +224,11 @@ std::ostream& operator<<(std::ostream& out, Sphere sphere) {
 //[/comment]
 void render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
 {
-	Vec3f* image = (Vec3f*)pool->Alloc(config.fullSize * sizeof(Vec3f));
-	Vec3f* firstChunk = (Vec3f*)pool->Alloc(config.chunkSize * sizeof(Vec3f));
-	Vec3f* secondChunk = (Vec3f*)pool->Alloc(config.chunkSize * sizeof(Vec3f));
-	Vec3f* thirdChunk = (Vec3f*)pool->Alloc(config.chunkSize * sizeof(Vec3f));
-	Vec3f* fourthChunk = (Vec3f*)pool->Alloc(config.chunkSize * sizeof(Vec3f));
+	Vec3f* image = (Vec3f*)imagePool->Alloc(config.fullSize * sizeof(Vec3f));
+	Vec3f* firstChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
+	Vec3f* secondChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
+	Vec3f* thirdChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
+	Vec3f* fourthChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
 
 
 	std::thread topQuarter = std::thread([&config, &firstChunk, spheres, size]
@@ -257,19 +258,19 @@ void render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 
 	topQuarter.join();
 	std::copy(firstChunk, firstChunk + config.chunkSize, image);
-	pool->Free(firstChunk);
+	chunkPool->Free(firstChunk);
 
 	quarterHalf.join();
 	std::copy(secondChunk, secondChunk + config.chunkSize, image + config.chunkSize);
-	pool->Free(secondChunk);
+	chunkPool->Free(secondChunk);
 
 	halfQuarter.join();
 	std::copy(thirdChunk, thirdChunk + config.chunkSize, image + config.chunkSize * 2);
-	pool->Free(thirdChunk);
+	chunkPool->Free(thirdChunk);
 
 	quarterBottom.join();
 	std::copy(fourthChunk, fourthChunk + config.chunkSize, image + config.chunkSize * 3);
-	pool->Free(fourthChunk);
+	chunkPool->Free(fourthChunk);
 
 	// Save result to a PPM image (keep these flags if you compile under Windows)
 	std::stringstream ss;
@@ -289,7 +290,7 @@ void render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	ofs << fileStream.str();
 	ofs.close();
 
-	pool->Free(image);
+	imagePool->Free(image);
 }
 
 void BasicRender(const RenderConfig& config)
@@ -406,7 +407,8 @@ int main(int argc, char** argv)
 	configObject.height = 480;
 	configObject.CalculateValues();
 
-	pool = new MemPool(2, sizeof(Vec3f) * (640 * 480));
+	chunkPool = new MemPool(4, sizeof(Vec3f) * configObject.chunkSize);
+	imagePool = new MemPool(1, sizeof(Vec3f) * configObject.fullSize);
 
 	SmoothScaling(configObject);
 	//BasicRender(configObject);
@@ -457,8 +459,11 @@ int main(int argc, char** argv)
 
 	std::cout << "Time to complete: " << timeToComplete << std::endl;
 
-	delete pool;
-	pool = nullptr;
+	delete chunkPool;
+	chunkPool = nullptr;
+
+	delete imagePool;
+	imagePool = nullptr;
 
 	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
 
