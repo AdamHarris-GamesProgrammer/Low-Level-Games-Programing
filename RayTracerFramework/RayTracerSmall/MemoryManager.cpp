@@ -10,6 +10,8 @@ void* operator new(size_t size, Heap* heap) {
 	size_t requestedBytes = size + sizeof(Header) + sizeof(Footer);
 	char* pMem = (char*)malloc(requestedBytes);
 
+
+
 	Header* pHeader = (Header*)pMem;
 	pHeader->size = size;
 	pHeader->check = deadCode;

@@ -8,11 +8,12 @@ public:
 		_pMemBlock(nullptr),
 		_pAllocatedMemBlock(nullptr),
 		_pFreeMemBlock(nullptr),
-		_poolSize(noOfChunks* (sizeOfChunks + sizeof(Node))),
+		_poolSize(noOfChunks * (sizeOfChunks + sizeof(Node))),
 		_blockSize(sizeOfChunks)
 	{
 		_pMemBlock = malloc(_poolSize); //Allocates the memory block.
 		//Can fail if the pool size is too large
+		heap->AllocateMemory(_poolSize);
 
 		if (_pMemBlock)
 		{

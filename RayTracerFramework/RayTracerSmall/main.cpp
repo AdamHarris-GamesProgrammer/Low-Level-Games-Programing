@@ -216,6 +216,8 @@ std::ostream& operator<<(std::ostream& out, Sphere sphere) {
 	return out;
 }
 
+float totalTime = 0.0f;
+
 //[comment]
 // Main rendering function. We compute a camera ray for each pixel of the image
 // trace it and return a color. If the ray hits a sphere, we return the color of the
@@ -223,11 +225,11 @@ std::ostream& operator<<(std::ostream& out, Sphere sphere) {
 //[/comment]
 void render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
 {
-	Vec3f* image =			(Vec3f*)imagePool->Alloc(config.fullSize * sizeof(Vec3f));
-	Vec3f* firstChunk =		(Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
-	Vec3f* secondChunk =	(Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
-	Vec3f* thirdChunk =		(Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
-	Vec3f* fourthChunk =	(Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
+	Vec3f* image = (Vec3f*)imagePool->Alloc(config.fullSize * sizeof(Vec3f));
+	Vec3f* firstChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
+	Vec3f* secondChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
+	Vec3f* thirdChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
+	Vec3f* fourthChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
 
 
 	std::thread topQuarter = std::thread([&config, &firstChunk, spheres, size]
@@ -255,7 +257,8 @@ void render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 		}
 	);
 
-	HeapManager::GetHeap("ChunkHeap")->DisplayDebugInformation();
+	//HeapManager::GetHeap("ChunkHeap")->DisplayDebugInformation();
+	//HeapManager::GetHeap("ImageHeap")->DisplayDebugInformation();
 
 	topQuarter.join();
 	std::copy(firstChunk, firstChunk + config.chunkSize, image);
@@ -273,25 +276,32 @@ void render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	std::copy(fourthChunk, fourthChunk + config.chunkSize, image + config.chunkSize * 3);
 	chunkPool->Free(fourthChunk);
 
+
 	// Save result to a PPM image (keep these flags if you compile under Windows)
+	Timer t;
+
 	std::stringstream ss;
+
 	ss << "./spheres" << iteration << ".ppm";
 	std::string tempString = ss.str();
-	char* filename = (char*)tempString.c_str();
 
 	std::stringstream fileStream;
 	fileStream << "P6\n" << config.width << " " << config.height << "\n255\n";
+
 	for (unsigned i = 0; i < config.fullSize; ++i) {
 		fileStream << (unsigned char)(std::min(1.0f, image[i].x) * 255) <<
 			(unsigned char)(std::min(1.0f, image[i].y) * 255) <<
 			(unsigned char)(std::min(1.0f, image[i].z) * 255);
 	}
 
-	std::ofstream ofs(filename, std::ios::out | std::ios::binary);
-	ofs << fileStream.str();
-	ofs.close();
+	std::ofstream ofs(tempString.c_str(), std::ios::out | std::ios::binary);
+	std::string fs = fileStream.str();
+	ofs.write(fs.c_str(), fs.length());
+
+	totalTime += t.Mark();
 
 	imagePool->Free(image);
+
 }
 
 void BasicRender(const RenderConfig& config)
@@ -418,11 +428,11 @@ int main(int argc, char** argv)
 	//Allocate a memory pool for the image itself
 	imagePool = new(im) MemoryPool(im, 1, sizeof(Vec3f) * configObject.fullSize);
 
-	//SmoothScaling(configObject);
-	BasicRender(configObject);
+	SmoothScaling(configObject);
+	//BasicRender(configObject);
 	//SimpleShrinking(configObject);
 
-	HeapManager::GetDefaultHeap().DisplayDebugInformation();
+	//HeapManager::GetDefaultHeap().DisplayDebugInformation();
 
 	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 	//RenderFromJSONFile(info, configObject);
@@ -455,6 +465,8 @@ int main(int argc, char** argv)
 
 
 	std::cout << "Time to complete: " << timeToComplete << std::endl;
+	std::cout << "Time taken up by file writing: " << totalTime << std::endl;
+	std::cout << "Average file write time: " << totalTime / 100 << std::endl;
 
 	delete chunkPool;
 	chunkPool = nullptr;
@@ -462,13 +474,13 @@ int main(int argc, char** argv)
 	delete imagePool;
 	imagePool = nullptr;
 
-	HeapManager::GetDefaultHeap().DisplayDebugInformation();
+	//HeapManager::GetDefaultHeap().DisplayDebugInformation();
 
 	std::cout << "Cleaning up rest of memory" << std::endl;
 
 	info.Cleanup();
 
-	HeapManager::GetDefaultHeap().DisplayDebugInformation();
+	//HeapManager::GetDefaultHeap().DisplayDebugInformation();
 
 	return 0;
 }
