@@ -34,23 +34,31 @@ void Heap::DisplayDebugInformation()
 {
 	std::cout << "Name: " << _name << std::endl;
 	std::cout << "____________________________________________" << std::endl;
-	std::cout << "Current memory: " << _totalAllocated << "\tPeak memory: " << _peak << std::endl;
-	std::cout << "____________________________________________" << std::endl;
-	std::cout << "TYPE\t\tSIZE" << std::endl;
-	std::cout << "____________________________________________" << std::endl;
 
-	Header* pCurrent = pHead;
-	size_t hSize = sizeof(Header);
-	while (pCurrent != NULL)
-	{
+	if (pHead != NULL) {
+		std::cout << "Current memory: " << _totalAllocated << "\tPeak memory: " << _peak << std::endl;
+		std::cout << "____________________________________________" << std::endl;
+		std::cout << "ADDRESS\t\t\tTYPE\t\tSIZE" << std::endl;
+		std::cout << "____________________________________________" << std::endl;
 
-		auto& startMem = *(pCurrent + hSize);
-		std::cout << typeid(startMem).name() << "\t\t" << pCurrent->size << std::endl;
-		
-		pCurrent = pCurrent->pNext;
+		Header* pCurrent = pHead;
+		size_t hSize = sizeof(Header);
+		while (pCurrent != NULL)
+		{
+
+			auto& startMem = *(pCurrent + hSize);
+			std::cout << &startMem << "\t" << typeid(startMem).name() << "\t" << pCurrent->size << std::endl;
+
+			pCurrent = pCurrent->pNext;
+		}
+
+		std::cout << std::endl;
+	}
+	else {
+		std::cout << "Total Allocated: " << _totalAllocated << std::endl;
 	}
 
-	std::cout << std::endl;
+
 
 }
 

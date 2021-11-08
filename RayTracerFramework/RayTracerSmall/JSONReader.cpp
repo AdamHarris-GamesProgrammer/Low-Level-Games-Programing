@@ -61,9 +61,14 @@ JSONSphereInfo& JSONReader::LoadSphereInfoFromFile(const char* filepath)
 		if (HasAttribute(&sphere, "emmisionColor")) {
 			animInfo.sphereArr[i]._emissionColor = ReadVec3f(sphere["emmisionColor"]);
 		}
+
+		if (HasAttribute(&sphere, "endSurfaceColor")) {
+			animInfo.sphereEndColor[i] = ReadVec3f(sphere["endSurfaceColor"]);
+		}
 	}
 
 	animInfo.CalculateSphereMovements();
+	animInfo.CalculateSphereColor();
 	return animInfo;
 }
 

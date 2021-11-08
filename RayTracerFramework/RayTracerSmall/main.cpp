@@ -82,7 +82,6 @@ Vec3f trace(
 	float tnear = INFINITY;
 	const Sphere* sphere = nullptr;
 	// find intersection of this ray with the sphere in the scene
-	//std::vector<Sphere*>::size_type size = spheres.size();
 	for (unsigned i = 0; i < size; ++i) {
 		float t0 = INFINITY, t1 = INFINITY;
 		if (spheres[i].intersect(rayorig, raydir, t0, t1)) {
@@ -381,6 +380,7 @@ void RenderFromJSONFile(const JSONSphereInfo& info, const RenderConfig& config) 
 	for (int i = 0; i < info.frameCount; i++) {
 		for (int j = 0; j < info.sphereCount; j++) {
 			info.sphereArr[j]._center += info.sphereMovementsPerFrame[j];
+			info.sphereArr[j]._surfaceColor += info.sphereColorPerFrame[j];
 		}
 
 		render(config, info.sphereArr, i, info.sphereCount);
@@ -417,7 +417,7 @@ int main(int argc, char** argv)
 	//BasicRender(configObject);
 	//SimpleShrinking(configObject);
 
-	//JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
+	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 	//RenderFromJSONFile(info, configObject);
 
 	//int* v = new int(5);
@@ -463,6 +463,12 @@ int main(int argc, char** argv)
 
 	delete imagePool;
 	imagePool = nullptr;
+
+	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
+
+	std::cout << "Cleaning up rest of memory" << std::endl;
+
+	info.Cleanup();
 
 	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
 
