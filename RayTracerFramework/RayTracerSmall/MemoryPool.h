@@ -4,7 +4,7 @@
 class MemoryPool
 {
 public:
-	MemoryPool(unsigned long noOfChunks, unsigned long sizeOfChunks /* Recommended 2**n */) :
+	MemoryPool(Heap* heap, unsigned long noOfChunks, unsigned long sizeOfChunks /* Recommended 2**n */) :
 		_pMemBlock(nullptr),
 		_pAllocatedMemBlock(nullptr),
 		_pFreeMemBlock(nullptr),

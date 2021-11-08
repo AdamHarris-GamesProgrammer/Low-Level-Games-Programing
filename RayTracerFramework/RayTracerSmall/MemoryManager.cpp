@@ -3,7 +3,7 @@
 #include<iostream>
 
 void* operator new(size_t size) {
-	return ::operator new(size, HeapManager::GetDefaultHeap());
+	return ::operator new(size, &HeapManager::GetDefaultHeap());
 }
 
 void* operator new(size_t size, Heap* heap) {

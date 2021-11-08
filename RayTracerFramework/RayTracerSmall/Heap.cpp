@@ -3,7 +3,7 @@
 #include <iostream>
 #include <typeinfo>
 
-Heap::Heap(const char* name) : _totalAllocated(0), _peak(0)
+Heap::Heap(std::string name) : _totalAllocated(0), _peak(0)
 {
 	_name = name;
 }

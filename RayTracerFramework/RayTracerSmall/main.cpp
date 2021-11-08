@@ -413,16 +413,16 @@ int main(int argc, char** argv)
 	Heap* ch = HeapManager::CreateHeap("ChunkHeap");
 
 	//Allocate a memory pool for the four image chunks 
-	chunkPool = new(ch) MemoryPool(4, sizeof(Vec3f) * configObject.chunkSize);
+	chunkPool = new(ch) MemoryPool(ch, 4, sizeof(Vec3f) * configObject.chunkSize);
 
 	//Allocate a memory pool for the image itself
-	imagePool = new(im) MemoryPool(1, sizeof(Vec3f) * configObject.fullSize);
+	imagePool = new(im) MemoryPool(im, 1, sizeof(Vec3f) * configObject.fullSize);
 
 	//SmoothScaling(configObject);
 	BasicRender(configObject);
 	//SimpleShrinking(configObject);
 
-	HeapManager::GetDefaultHeap()->DisplayDebugInformation();
+	HeapManager::GetDefaultHeap().DisplayDebugInformation();
 
 	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 	//RenderFromJSONFile(info, configObject);
@@ -462,13 +462,13 @@ int main(int argc, char** argv)
 	delete imagePool;
 	imagePool = nullptr;
 
-	HeapManager::GetDefaultHeap()->DisplayDebugInformation();
+	HeapManager::GetDefaultHeap().DisplayDebugInformation();
 
 	std::cout << "Cleaning up rest of memory" << std::endl;
 
 	info.Cleanup();
 
-	HeapManager::GetDefaultHeap()->DisplayDebugInformation();
+	HeapManager::GetDefaultHeap().DisplayDebugInformation();
 
 	return 0;
 }

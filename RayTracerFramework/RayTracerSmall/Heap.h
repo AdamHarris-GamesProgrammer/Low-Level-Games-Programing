@@ -7,11 +7,11 @@ struct Header;
 class Heap
 {
 public:
-	Heap(const char* name);
+	Heap(std::string name);
 	void AllocateMemory(int size);
 	void DeallocateMemory(int size);
 	int GetAmountAllocated();
-	const char* GetName() const { return _name; }
+	std::string GetName() const { return _name; }
 
 	void* operator new (size_t size);
 
@@ -22,6 +22,6 @@ public:
 private:
 	int _totalAllocated;
 	int _peak;
-	const char* _name;
+	std::string _name;
 };
 
