@@ -255,6 +255,8 @@ void render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 		}
 	);
 
+	HeapManager::GetHeap("ChunkHeap")->DisplayDebugInformation();
+
 	topQuarter.join();
 	std::copy(firstChunk, firstChunk + config.chunkSize, image);
 	chunkPool->Free(firstChunk);
@@ -407,50 +409,46 @@ int main(int argc, char** argv)
 	configObject.height = 480;
 	configObject.CalculateValues();
 
+	Heap* im = HeapManager::CreateHeap("ImageHeap");
+	Heap* ch = HeapManager::CreateHeap("ChunkHeap");
+
 	//Allocate a memory pool for the four image chunks 
-	chunkPool = new MemoryPool(4, sizeof(Vec3f) * configObject.chunkSize);
+	chunkPool = new(ch) MemoryPool(4, sizeof(Vec3f) * configObject.chunkSize);
 
 	//Allocate a memory pool for the image itself
-	imagePool = new MemoryPool(1, sizeof(Vec3f) * configObject.fullSize);
+	imagePool = new(im) MemoryPool(1, sizeof(Vec3f) * configObject.fullSize);
 
-	SmoothScaling(configObject);
-	//BasicRender(configObject);
+	//SmoothScaling(configObject);
+	BasicRender(configObject);
 	//SimpleShrinking(configObject);
+
+	HeapManager::GetDefaultHeap()->DisplayDebugInformation();
 
 	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 	//RenderFromJSONFile(info, configObject);
 
 	//int* v = new int(5);
-
 	//HeapFactory::CreateHeap("TestHeap");
 	//Heap* th = HeapFactory::GetHeap("TestHeap");
 	//int* arr = ::new int[1000];
-
 	//int* a = new int[2];
 	//int* b = new int[5];
 	//int* c = new int[7];
-
 	//std::cout << "Allocating" << std::endl;
-
 	//HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
-
 	//delete[] v;
 	//v = nullptr;
 	//delete[] arr;
 	//arr = nullptr;
 	//delete[] c;
 	//c = nullptr;
-
 	//std::cout << "Deallocating some memory" << std::endl;
-
 	//HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
-
 	//std::cout << "Deallocating all of it" << std::endl;
 	//delete[] a;
 	//a = nullptr;
 	//delete[] b;
 	//b = nullptr;
-
 	//HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
 
 	timeToComplete += timer.Mark();
@@ -464,13 +462,13 @@ int main(int argc, char** argv)
 	delete imagePool;
 	imagePool = nullptr;
 
-	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
+	HeapManager::GetDefaultHeap()->DisplayDebugInformation();
 
 	std::cout << "Cleaning up rest of memory" << std::endl;
 
 	info.Cleanup();
 
-	HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
+	HeapManager::GetDefaultHeap()->DisplayDebugInformation();
 
 	return 0;
 }

@@ -2,6 +2,10 @@
 
 #include<iostream>
 
+void* operator new(size_t size) {
+	return ::operator new(size, HeapManager::GetDefaultHeap());
+}
+
 void* operator new(size_t size, Heap* heap) {
 	size_t requestedBytes = size + sizeof(Header) + sizeof(Footer);
 	char* pMem = (char*)malloc(requestedBytes);
@@ -29,12 +33,9 @@ void* operator new(size_t size, Heap* heap) {
 
 	void* pStartMemBlock = pMem + sizeof(Header);
 	return pStartMemBlock;
-
 }
 
-void* operator new(size_t size) {
-	return ::operator new(size, HeapFactory::GetDefaultHeap());
-}
+
 
 void operator delete(void* pMem) {
 	Header* pHeader = (Header*)((char*)pMem - sizeof(Header));

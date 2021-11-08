@@ -2,7 +2,7 @@
 #include "Heap.h"
 #include <unordered_map>
 
-class HeapFactory
+class HeapManager
 {
 public:
 	static Heap* GetDefaultHeap();
