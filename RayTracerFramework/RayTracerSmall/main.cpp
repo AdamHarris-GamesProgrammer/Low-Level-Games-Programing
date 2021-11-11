@@ -235,21 +235,30 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	Vec3f* fourthChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
 
 
-	std::thread topQuarter = std::thread([&config, &firstChunk, spheres, size] {
+	std::thread topQuarter = std::thread([&config, &firstChunk, spheres, size]
+		{
 			RenderSector(0, config.width, config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(firstChunk), size);
-		});
+		}
+	);
 
-	std::thread quarterHalf = std::thread([&config, &secondChunk, spheres, size] {
+
+	std::thread quarterHalf = std::thread([&config, &secondChunk, spheres, size]
+		{
 			RenderSector(config.quarterHeight, config.width, config.halfHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(secondChunk), size);
-		});
+		}
+	);
 
-	std::thread halfQuarter = std::thread([&config, &thirdChunk, spheres, size] {
+	std::thread halfQuarter = std::thread([&config, &thirdChunk, spheres, size]
+		{
 			RenderSector(config.halfHeight, config.width, config.halfHeight + config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(thirdChunk), size);
-		});
+		}
+	);
 
-	std::thread quarterBottom = std::thread([&config, &fourthChunk, spheres, size] {
+	std::thread quarterBottom = std::thread([&config, &fourthChunk, spheres, size]
+		{
 			RenderSector(config.halfHeight + config.quarterHeight, config.width, config.height, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(fourthChunk), size);
-		});
+		}
+	);
 
 	topQuarter.join();
 	quarterHalf.join();
@@ -263,14 +272,22 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	std::stringstream s3;
 	std::stringstream s4;
 
-	std::thread a = std::thread([firstChunk, &config, &s1] {
-			WriteSector(firstChunk, config.chunkSize, s1); });
-	std::thread b = std::thread([secondChunk, &config, &s2] {
-			WriteSector(secondChunk, config.chunkSize, s2); });
-	std::thread c = std::thread([thirdChunk, &config, &s3] {
-			WriteSector(thirdChunk, config.chunkSize, s3); });
-	std::thread d = std::thread([fourthChunk, &config, &s4] {
-			WriteSector(fourthChunk, config.chunkSize, s4); });
+	std::thread a = std::thread([firstChunk, &config, &s1] 
+		{
+			WriteSector(firstChunk, config.chunkSize, s1);
+		});
+	std::thread b = std::thread([secondChunk, &config, &s2]
+		{
+			WriteSector(secondChunk, config.chunkSize, s2);
+		});
+	std::thread c = std::thread([thirdChunk, &config, &s3]
+		{
+			WriteSector(thirdChunk, config.chunkSize, s3);
+		});
+	std::thread d = std::thread([fourthChunk, &config, &s4]
+		{
+			WriteSector(fourthChunk, config.chunkSize, s4);
+		});
 
 	a.join();
 	b.join();
@@ -282,11 +299,15 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	chunkPool->Free(thirdChunk);
 	chunkPool->Free(fourthChunk);
 
-	std::string filename = "./spheres" + std::to_string(iteration) + ".ppm";
-	std::ofstream ofs(filename.c_str(), std::ios::out | std::ios::binary);
+	std::stringstream ss;
+	ss << "./spheres" << iteration << ".ppm";
+	std::string tempString = ss.str();
+	std::ofstream ofs(tempString.c_str(), std::ios::out | std::ios::binary);
 
-	std::string firstLine = "P6\n" + std::to_string(config.width) + " " + std::to_string(config.height) + "\n255\n";
-	ofs.write(firstLine.c_str(), firstLine.length());
+	std::stringstream fileStream;
+	fileStream << "P6\n" << config.width << " " << config.height << "\n255\n";
+	std::string fs = fileStream.str();
+	ofs.write(fs.c_str(), fs.length());
 
 	std::string s1s = s1.str();
 	std::string s2s = s2.str();
@@ -297,6 +318,13 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	ofs.write(s2s.c_str(), s2s.length());
 	ofs.write(s3s.c_str(), s3s.length());
 	ofs.write(s4s.c_str(), s4s.length());
+
+	//FILE* fp = fopen(tempString.c_str(), "w");
+	//fwrite(s1s.c_str(), 1, sizeof(s1s), fp);
+	//fwrite(s2s.c_str(), 1, sizeof(s2s), fp);
+	//fwrite(s3s.c_str(), 1, sizeof(s3s), fp);
+	//fwrite(s4s.c_str(), 1, sizeof(s4s), fp);
+	//fclose(fp);
 }
 
 void BasicRender(const RenderConfig& config)
@@ -424,8 +452,8 @@ int main(int argc, char** argv)
 
 	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
-	SmoothScaling(configObject);
-	//BasicRender(configObject);
+	//SmoothScaling(configObject);
+	BasicRender(configObject);
 	//SimpleShrinking(configObject);
 	//RenderFromJSONFile(info, configObject);
 
@@ -450,4 +478,5 @@ int main(int argc, char** argv)
 
 
 	return 0;
+
 }
