@@ -318,13 +318,6 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	ofs.write(s2s.c_str(), s2s.length());
 	ofs.write(s3s.c_str(), s3s.length());
 	ofs.write(s4s.c_str(), s4s.length());
-
-	//FILE* fp = fopen(tempString.c_str(), "w");
-	//fwrite(s1s.c_str(), 1, sizeof(s1s), fp);
-	//fwrite(s2s.c_str(), 1, sizeof(s2s), fp);
-	//fwrite(s3s.c_str(), 1, sizeof(s3s), fp);
-	//fwrite(s4s.c_str(), 1, sizeof(s4s), fp);
-	//fclose(fp);
 }
 
 void BasicRender(const RenderConfig& config)
@@ -452,8 +445,8 @@ int main(int argc, char** argv)
 
 	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
-	//SmoothScaling(configObject);
-	BasicRender(configObject);
+	SmoothScaling(configObject);
+	//BasicRender(configObject);
 	//SimpleShrinking(configObject);
 	//RenderFromJSONFile(info, configObject);
 
@@ -474,7 +467,7 @@ int main(int argc, char** argv)
 	std::cout << "Deleting heaps" << std::endl;
 	HeapManager::CleanHeaps();
 
-	//system("ffmpeg -framerate 25 -i spheres%d.ppm -vcodec mpeg4 output.mp4");
+	system("ffmpeg -framerate 25 -i spheres%d.ppm -vcodec mpeg4 output.mp4");
 
 
 	return 0;
