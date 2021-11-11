@@ -49,7 +49,6 @@
 #endif
 
 MemoryPool* chunkPool;
-MemoryPool* imagePool;
 
 //[comment]
 // This variable controls the maximum recursion depth
@@ -207,6 +206,14 @@ void RenderSector(
 	}
 }
 
+void WriteSector(Vec3f* chunk, int size,std::stringstream& ss) {
+	for (unsigned i = 0; i < size; i++) {
+		ss << (unsigned char)(std::min(1.0f, chunk[i].x) * 255) <<
+			(unsigned char)(std::min(1.0f, chunk[i].y) * 255) <<
+			(unsigned char)(std::min(1.0f, chunk[i].z) * 255);
+	}
+}
+
 std::ostream& operator<<(std::ostream& out, Sphere sphere) {
 	out << "SPHERE INFO\n " << "Position: " << sphere._center
 		<< "\nRadius: " << sphere._radius << "\nSurface Colour: " << sphere._surfaceColor
@@ -223,7 +230,6 @@ std::ostream& operator<<(std::ostream& out, Sphere sphere) {
 //[/comment]
 void Render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
 {
-	Vec3f* image = (Vec3f*)imagePool->Alloc(config.fullSize * sizeof(Vec3f));
 	Vec3f* firstChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
 	Vec3f* secondChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
 	Vec3f* thirdChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
@@ -258,21 +264,10 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 
 
 	topQuarter.join();
-	std::copy(firstChunk, firstChunk + config.chunkSize, image);
-	chunkPool->Free(firstChunk);
-
 	quarterHalf.join();
-	std::copy(secondChunk, secondChunk + config.chunkSize, image + config.chunkSize);
-	chunkPool->Free(secondChunk);
-
 	halfQuarter.join();
-	std::copy(thirdChunk, thirdChunk + config.chunkSize, image + config.chunkSize * 2);
-	chunkPool->Free(thirdChunk);
-
 	quarterBottom.join();
-	std::copy(fourthChunk, fourthChunk + config.chunkSize, image + config.chunkSize * 3);
-	chunkPool->Free(fourthChunk);
-
+	
 
 	// Save result to a PPM image (keep these flags if you compile under Windows)
 	std::stringstream ss;
@@ -283,17 +278,52 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	std::stringstream fileStream;
 	fileStream << "P6\n" << config.width << " " << config.height << "\n255\n";
 
-	for (unsigned i = 0; i < config.fullSize; ++i) {
-		fileStream << (unsigned char)(std::min(1.0f, image[i].x) * 255) <<
-			(unsigned char)(std::min(1.0f, image[i].y) * 255) <<
-			(unsigned char)(std::min(1.0f, image[i].z) * 255);
-	}
+
+	std::stringstream s1;
+	std::stringstream s2;
+	std::stringstream s3;
+	std::stringstream s4;
+
+	std::thread a = std::thread([firstChunk, &config, &s1] 
+		{
+			WriteSector(firstChunk, config.chunkSize, s1);
+		});
+	std::thread b = std::thread([secondChunk, &config, &s2]
+		{
+			WriteSector(secondChunk, config.chunkSize, s2);
+		});
+	std::thread c = std::thread([thirdChunk, &config, &s3]
+		{
+			WriteSector(thirdChunk, config.chunkSize, s3);
+		});
+	std::thread d = std::thread([fourthChunk, &config, &s4]
+		{
+			WriteSector(fourthChunk, config.chunkSize, s4);
+		});
+
+	a.join();
+	b.join();
+	c.join();
+	d.join();
+
+	chunkPool->Free(firstChunk);
+	chunkPool->Free(secondChunk);
+	chunkPool->Free(thirdChunk);
+	chunkPool->Free(fourthChunk);
 
 	std::ofstream ofs(tempString.c_str(), std::ios::out | std::ios::binary);
 	std::string fs = fileStream.str();
 	ofs.write(fs.c_str(), fs.length());
 
-	imagePool->Free(image);
+	std::string s1s = s1.str();
+	std::string s2s = s2.str();
+	std::string s3s = s3.str();
+	std::string s4s = s4.str();
+
+	ofs.write(s1s.c_str(), s1s.length());
+	ofs.write(s2s.c_str(), s2s.length());
+	ofs.write(s3s.c_str(), s3s.length());
+	ofs.write(s4s.c_str(), s4s.length());
 }
 
 void BasicRender(const RenderConfig& config)
@@ -416,22 +446,18 @@ int main(int argc, char** argv)
 
 	Timer timer;
 
-	Heap* imageHeap = HeapManager::CreateHeap("ImageHeap");
 	Heap* chunkHeap = HeapManager::CreateHeap("ChunkHeap");
 
 	//Allocate a memory pool for the four image chunks 
 	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, 4, sizeof(Vec3f) * configObject.chunkSize);
 
-	//Allocate a memory pool for the image itself
-	imagePool = new(imageHeap) MemoryPool(imageHeap, 1, sizeof(Vec3f) * configObject.fullSize);
-
 	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
 
-	//SmoothScaling(configObject);
+	SmoothScaling(configObject);
 	//BasicRender(configObject);
 	//SimpleShrinking(configObject);
-	RenderFromJSONFile(info, configObject);
+	//RenderFromJSONFile(info, configObject);
 
 	//HeapManager::GetDefaultHeap().DisplayDebugInformation();
 
@@ -440,9 +466,6 @@ int main(int argc, char** argv)
 
 	delete chunkPool;
 	chunkPool = nullptr;
-
-	delete imagePool;
-	imagePool = nullptr;
 
 	info.Cleanup();
 	
@@ -453,5 +476,10 @@ int main(int argc, char** argv)
 	std::cout << "Deleting heaps" << std::endl;
 	HeapManager::CleanHeaps();
 
+	system("ffmpeg -framerate 25 -i spheres%d.ppm -vcodec mpeg4 output.mp4");
+	//system("y");
+
+
 	return 0;
+
 }

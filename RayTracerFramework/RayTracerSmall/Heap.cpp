@@ -102,6 +102,7 @@ void Heap::CheckIntegrity()
 	console = GetStdHandle(STD_OUTPUT_HANDLE);
 	int red = 12;
 	int yellow = 14;
+	int brightWhite = 15;
 
 	if (pHead != NULL) {
 		Header* pCurrent = pHead;
@@ -138,6 +139,6 @@ void Heap::CheckIntegrity()
 		std::cout << "[MESSAGE: Heap::CheckIntegrity]: No Errors found in " << _name << std::endl;
 	}
 
-	SetConsoleTextAttribute(console, 15); //15 = bright white
+	SetConsoleTextAttribute(console, brightWhite); 
 }
 

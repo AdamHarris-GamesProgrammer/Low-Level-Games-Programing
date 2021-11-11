@@ -42,8 +42,5 @@ void operator delete(void* pMem) {
 
 	pHeader->pHeap->DeallocateMemory(pHeader, pHeader->size);
 
-	
-
-
 	free(pHeader);
 }
