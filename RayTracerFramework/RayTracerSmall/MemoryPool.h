@@ -11,34 +11,51 @@ public:
 		_poolSize(noOfChunks * (sizeOfChunks + sizeof(Node))),
 		_blockSize(sizeOfChunks)
 	{
-		_pMemBlock = malloc(_poolSize); //Allocates the memory block.
-		//Can fail if the pool size is too large
-		heap->AllocateMemory(_poolSize);
+		//Calculate required bytes 
+		size_t requestedBytes = _poolSize + sizeof(Header) + sizeof(Footer);
+		//Allocate memory
+		char* pMem = (char*)malloc(requestedBytes);
 
+		//Header is at the start of the memory block
+		Header* pHeader = (Header*)pMem;
+		pHeader->pHeap = heap;
+
+		//Allocates the memory to the heap mem counter and inserts the pool into the linked list
+		heap->AllocateMemory(pHeader, _poolSize);
+
+		//Setting the start of the memory block
+		_pMemBlock = pMem + sizeof(Header);
 		if (_pMemBlock)
 		{
 			for (unsigned i = 0; i < noOfChunks; i++)
 			{
-				//Linked list 
-				Node* pCurUnit = (Node*)((char*)_pMemBlock + i * (sizeOfChunks + sizeof(Node)));
+				//Linked list for the blocks of memory
+				Node* pCurrentNode = (Node*)((char*)_pMemBlock + i * (sizeOfChunks + sizeof(Node)));
 
-				pCurUnit->pPrev = nullptr;
-				pCurUnit->pNext = _pFreeMemBlock;  
+				//Sets the default values 
+				pCurrentNode->pPrev = nullptr;
+				pCurrentNode->pNext = _pFreeMemBlock;  
 
+				//Check that the free memory block has been initialized
 				if (_pFreeMemBlock != nullptr)
-				{
-					_pFreeMemBlock->pPrev = pCurUnit;
-				}
-				_pFreeMemBlock = pCurUnit;
+					//Set the previous node to the current node
+					_pFreeMemBlock->pPrev = pCurrentNode;
+
+				//Sets the free mem block to the current node, allowing us to setup the next chunk 
+				_pFreeMemBlock = pCurrentNode;
 			}
 		}
+
+		//Sets up the footer pointer
+		void* pFooterAddr = ((char*)pMem + sizeof(Header) + _poolSize);
+		Footer* pFooter = (Footer*)pFooterAddr;
+		pFooter->check = deadCode;
 	}
 
 	~MemoryPool()
 	{
-		//std::cout << "Deallocating all bytes" << std::endl;
-		//free all pooled memory
-		free(_pMemBlock);
+		//Calls the global delete override
+		delete _pMemBlock;
 	}
 
 	// Allocate memory unit If memory pool can`t provide proper memory unit,

@@ -147,14 +147,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Heap.cpp" />
-    <ClCompile Include="HeapFactory.cpp" />
+    <ClCompile Include="HeapManager.cpp" />
     <ClCompile Include="JSONReader.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MemoryManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Heap.h" />
-    <ClInclude Include="HeapFactory.h" />
+    <ClInclude Include="HeapManager.h" />
     <ClInclude Include="JSONReader.h" />
     <ClInclude Include="MemoryManager.h" />
     <ClInclude Include="MemoryPool.h" />

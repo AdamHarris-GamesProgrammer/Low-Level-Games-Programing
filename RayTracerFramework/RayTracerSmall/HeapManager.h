@@ -8,6 +8,8 @@ public:
 	static Heap& GetDefaultHeap();
 	static Heap* CreateHeap(std::string name);
 	static Heap* GetHeap(std::string name);
+	static void CleanHeaps();
+	static void DebugAll();
 
 private:
 	static Heap defaultHeap;

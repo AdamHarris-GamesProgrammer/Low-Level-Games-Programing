@@ -10,20 +10,10 @@ void* operator new(size_t size, Heap* heap) {
 	size_t requestedBytes = size + sizeof(Header) + sizeof(Footer);
 	char* pMem = (char*)malloc(requestedBytes);
 
-
-
 	Header* pHeader = (Header*)pMem;
-	pHeader->size = size;
-	pHeader->check = deadCode;
 	pHeader->pHeap = heap;
 
-	pHeader->pPrevious = NULL;
-	pHeader->pNext = heap->pHead;
-	if (heap->pHead != NULL)
-		heap->pHead->pPrevious = pHeader;
-	heap->pHead = pHeader;
-
-	pHeader->pHeap->AllocateMemory(size);
+	heap->AllocateMemory(pHeader, size);
 
 	//Get the location of the footer start position
 	//pMem (start of mem block) + sizeof(header) (offset) + size of the mem block. Will give the memory position of the footer
@@ -50,20 +40,10 @@ void operator delete(void* pMem) {
 		std::cout << "[ERROR: MemoryManager::delete]: Footer check code does not match" << std::endl;
 	}
 
-	pHeader->pHeap->DeallocateMemory(pHeader->size);
+	pHeader->pHeap->DeallocateMemory(pHeader, pHeader->size);
 
 	
-	if (pHeader->pNext != NULL) {
-		if(pHeader->pPrevious != NULL) pHeader->pPrevious->pNext = pHeader->pNext;
-		pHeader->pNext->pPrevious = pHeader->pPrevious;
-	}
-	else if(pHeader->pPrevious != NULL) {
-		pHeader->pPrevious->pNext = NULL;
-	}
 
-	if (pHeader->pHeap->pHead == pHeader) {
-		pHeader->pHeap->pHead = pHeader->pNext;
-	}
 
 	free(pHeader);
 }

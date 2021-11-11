@@ -8,8 +8,8 @@ class Heap
 {
 public:
 	Heap(std::string name);
-	void AllocateMemory(int size);
-	void DeallocateMemory(int size);
+	void AllocateMemory(Header* header, int size);
+	void DeallocateMemory(Header* header, int size);
 	int GetAmountAllocated();
 	std::string GetName() const { return _name; }
 
@@ -18,6 +18,7 @@ public:
 	Header* pHead = NULL;
 
 	void DisplayDebugInformation();
+	void CheckIntegrity();
 
 private:
 	int _totalAllocated;

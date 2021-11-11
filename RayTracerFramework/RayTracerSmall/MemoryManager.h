@@ -1,6 +1,6 @@
 #pragma once
 #include "Heap.h"
-#include "HeapFactory.h"
+#include "HeapManager.h"
 
 #define deadCode 0xDEADC0DE
 

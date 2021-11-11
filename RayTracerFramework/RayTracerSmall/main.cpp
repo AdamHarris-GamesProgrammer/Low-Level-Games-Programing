@@ -36,7 +36,7 @@
 #include "Vec3.h"
 #include "Sphere.h"
 #include "MemoryManager.h"
-#include "HeapFactory.h"
+#include "HeapManager.h"
 #include "JSONReader.h"
 #include "MemoryPool.h"
 
@@ -216,14 +216,12 @@ std::ostream& operator<<(std::ostream& out, Sphere sphere) {
 	return out;
 }
 
-float totalTime = 0.0f;
-
 //[comment]
 // Main rendering function. We compute a camera ray for each pixel of the image
 // trace it and return a color. If the ray hits a sphere, we return the color of the
 // sphere at the intersection point, else we return the background color.
 //[/comment]
-void render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
+void Render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
 {
 	Vec3f* image = (Vec3f*)imagePool->Alloc(config.fullSize * sizeof(Vec3f));
 	Vec3f* firstChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
@@ -257,8 +255,7 @@ void render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 		}
 	);
 
-	//HeapManager::GetHeap("ChunkHeap")->DisplayDebugInformation();
-	//HeapManager::GetHeap("ImageHeap")->DisplayDebugInformation();
+
 
 	topQuarter.join();
 	std::copy(firstChunk, firstChunk + config.chunkSize, image);
@@ -278,8 +275,6 @@ void render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 
 
 	// Save result to a PPM image (keep these flags if you compile under Windows)
-	Timer t;
-
 	std::stringstream ss;
 
 	ss << "./spheres" << iteration << ".ppm";
@@ -298,16 +293,13 @@ void render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	std::string fs = fileStream.str();
 	ofs.write(fs.c_str(), fs.length());
 
-	totalTime += t.Mark();
-
 	imagePool->Free(image);
-
 }
 
 void BasicRender(const RenderConfig& config)
 {
+	//Create dynamic array for spheres, more efficient than creating vector
 	Sphere* spheres = new Sphere[4];
-	// Vector structure for Sphere (position, radius, surface color, reflectivity, transparency, emission color)
 
 	spheres[0] = Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 0, 0.0);
 	spheres[1] = Sphere(Vec3f(0.0, 0, -20), 4, Vec3f(1.00, 0.32, 0.36), 1, 0.5); // The radius paramter is the value we will change
@@ -315,7 +307,7 @@ void BasicRender(const RenderConfig& config)
 	spheres[3] = Sphere(Vec3f(5.0, 0, -25), 3, Vec3f(0.65, 0.77, 0.97), 1, 0.0);
 
 	// This creates a file, titled 1.ppm in the current working directory
-	render(config, spheres, 1, 4);
+	Render(config, spheres, 1, 4);
 
 	delete[] spheres;
 	spheres = nullptr;
@@ -324,8 +316,9 @@ void BasicRender(const RenderConfig& config)
 
 void SimpleShrinking(const RenderConfig& config)
 {
+	//Create dynamic array for spheres, more efficient than creating vector
 	Sphere* spheres = new Sphere[4];
-	// Vector structure for Sphere (position, radius, surface color, reflectivity, transparency, emission color)
+
 
 	spheres[0] = Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 0, 0.0);
 	spheres[1] = Sphere(Vec3f(0.0, 0, -20), 4, Vec3f(1.00, 0.32, 0.36), 1, 0.5); // The radius paramter is the value we will change
@@ -355,7 +348,7 @@ void SimpleShrinking(const RenderConfig& config)
 			spheres[1]._radiusSqr = 1 * 1;
 		}
 
-		render(config, spheres, i, 4);
+		Render(config, spheres, i, 4);
 		// Dont forget to clear the Vector holding the spheres.
 	}
 
@@ -365,8 +358,8 @@ void SimpleShrinking(const RenderConfig& config)
 
 void SmoothScaling(const RenderConfig& config)
 {
+	//Create dynamic array for spheres, more efficient than creating vector
 	Sphere* spheres = new Sphere[4];
-	// Vector structure for Sphere (position, radius, surface color, reflectivity, transparency, emission color)
 
 	spheres[0] = Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 0, 0.0);
 	spheres[1] = Sphere(Vec3f(0.0, 0, -20), 0 / 100, Vec3f(1.00, 0.32, 0.36), 1, 0.5); // Radius++ change here
@@ -379,7 +372,7 @@ void SmoothScaling(const RenderConfig& config)
 		spheres[1]._radius = radius;
 		spheres[1]._radiusSqr = radius * radius;
 
-		render(config, spheres, r, 4);
+		Render(config, spheres, r, 4);
 		std::cout << "Rendered and saved spheres" << r << ".ppm" << std::endl;
 	}
 
@@ -389,13 +382,17 @@ void SmoothScaling(const RenderConfig& config)
 
 void RenderFromJSONFile(const JSONSphereInfo& info, const RenderConfig& config) {
 
+	//Iterate through all the frames
 	for (int i = 0; i < info.frameCount; i++) {
+		//Iterate through all spheres
 		for (int j = 0; j < info.sphereCount; j++) {
+			//Change sphere position and surface color
 			info.sphereArr[j]._center += info.sphereMovementsPerFrame[j];
 			info.sphereArr[j]._surfaceColor += info.sphereColorPerFrame[j];
 		}
 
-		render(config, info.sphereArr, i, info.sphereCount);
+		//Call render function
+		Render(config, info.sphereArr, i, info.sphereCount);
 		std::cout << "Rendered and saved spheres" << i << ".ppm" << std::endl;
 	}
 }
@@ -410,63 +407,36 @@ int main(int argc, char** argv)
 	// This sample only allows one choice per program execution. Feel free to improve upon this
 	srand(13);
 
-	float timeToComplete = 0.0f;
-
-	Timer timer;
+	
 
 	RenderConfig configObject;
 	configObject.width = 640;
 	configObject.height = 480;
 	configObject.CalculateValues();
 
-	Heap* im = HeapManager::CreateHeap("ImageHeap");
-	Heap* ch = HeapManager::CreateHeap("ChunkHeap");
+	Timer timer;
+
+	Heap* imageHeap = HeapManager::CreateHeap("ImageHeap");
+	Heap* chunkHeap = HeapManager::CreateHeap("ChunkHeap");
 
 	//Allocate a memory pool for the four image chunks 
-	chunkPool = new(ch) MemoryPool(ch, 4, sizeof(Vec3f) * configObject.chunkSize);
+	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, 4, sizeof(Vec3f) * configObject.chunkSize);
 
 	//Allocate a memory pool for the image itself
-	imagePool = new(im) MemoryPool(im, 1, sizeof(Vec3f) * configObject.fullSize);
+	imagePool = new(imageHeap) MemoryPool(imageHeap, 1, sizeof(Vec3f) * configObject.fullSize);
 
-	SmoothScaling(configObject);
-	//BasicRender(configObject);
+	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
+
+
+	//SmoothScaling(configObject);
+	BasicRender(configObject);
 	//SimpleShrinking(configObject);
+	//RenderFromJSONFile(info, configObject);
 
 	//HeapManager::GetDefaultHeap().DisplayDebugInformation();
 
-	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
-	//RenderFromJSONFile(info, configObject);
-
-	//int* v = new int(5);
-	//HeapFactory::CreateHeap("TestHeap");
-	//Heap* th = HeapFactory::GetHeap("TestHeap");
-	//int* arr = ::new int[1000];
-	//int* a = new int[2];
-	//int* b = new int[5];
-	//int* c = new int[7];
-	//std::cout << "Allocating" << std::endl;
-	//HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
-	//delete[] v;
-	//v = nullptr;
-	//delete[] arr;
-	//arr = nullptr;
-	//delete[] c;
-	//c = nullptr;
-	//std::cout << "Deallocating some memory" << std::endl;
-	//HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
-	//std::cout << "Deallocating all of it" << std::endl;
-	//delete[] a;
-	//a = nullptr;
-	//delete[] b;
-	//b = nullptr;
-	//HeapFactory::GetDefaultHeap()->DisplayDebugInformation();
-
-	timeToComplete += timer.Mark();
-
-
+	float timeToComplete = timer.Mark();
 	std::cout << "Time to complete: " << timeToComplete << std::endl;
-	std::cout << "Time taken up by file writing: " << totalTime << std::endl;
-	std::cout << "Average file write time: " << totalTime / 100 << std::endl;
 
 	delete chunkPool;
 	chunkPool = nullptr;
@@ -474,13 +444,14 @@ int main(int argc, char** argv)
 	delete imagePool;
 	imagePool = nullptr;
 
-	//HeapManager::GetDefaultHeap().DisplayDebugInformation();
-
-	std::cout << "Cleaning up rest of memory" << std::endl;
-
 	info.Cleanup();
+	
+	std::cout << "\n\n" << "HEAP DUMP" << "\n\n";
+	HeapManager::DebugAll();
 
-	//HeapManager::GetDefaultHeap().DisplayDebugInformation();
+
+	std::cout << "Deleting heaps" << std::endl;
+	HeapManager::CleanHeaps();
 
 	return 0;
 }
