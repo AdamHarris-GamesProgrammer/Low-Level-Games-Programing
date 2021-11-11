@@ -429,9 +429,9 @@ int main(int argc, char** argv)
 
 
 	//SmoothScaling(configObject);
-	BasicRender(configObject);
+	//BasicRender(configObject);
 	//SimpleShrinking(configObject);
-	//RenderFromJSONFile(info, configObject);
+	RenderFromJSONFile(info, configObject);
 
 	//HeapManager::GetDefaultHeap().DisplayDebugInformation();
 
