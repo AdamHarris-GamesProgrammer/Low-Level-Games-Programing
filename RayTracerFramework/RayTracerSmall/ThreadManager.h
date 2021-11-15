@@ -24,8 +24,5 @@ public:
 
 private:
 	std::vector<std::thread*> _threads;
-
-
-
 };
 

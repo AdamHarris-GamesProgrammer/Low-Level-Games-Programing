@@ -116,7 +116,6 @@ public:
 			_pFreeMemBlock = pCurUnit;
 		}
 	}
-
 private:
 	//This is a doubly linked list
 	struct Node
