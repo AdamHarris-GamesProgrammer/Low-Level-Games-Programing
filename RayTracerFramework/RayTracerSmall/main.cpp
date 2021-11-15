@@ -244,16 +244,6 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	manager.CreateTask([&config, &fourthChunk, spheres, size] {RenderSector(0, config.halfHeight + config.quarterHeight, config.width, config.height, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(fourthChunk), size); });
 	manager.WaitForAllThreads();
 
-	// Save result to a PPM image (keep these flags if you compile under Windows)
-	std::stringstream ss;
-
-	ss << "./spheres" << iteration << ".ppm";
-	std::string tempString = ss.str();
-
-	std::stringstream fileStream;
-	fileStream << "P6\n" << config.width << " " << config.height << "\n255\n";
-
-
 	std::stringstream s1, s2, s3, s4;
 	manager.CreateTask([firstChunk, &config, &s1] {WriteSector(firstChunk, config.chunkSize, s1); });
 	manager.CreateTask([secondChunk, &config, &s2] {WriteSector(secondChunk, config.chunkSize, s2); });
@@ -266,9 +256,10 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	chunkPool->Free(thirdChunk);
 	chunkPool->Free(fourthChunk);
 
-	std::ofstream ofs(tempString.c_str(), std::ios::out | std::ios::binary);
-	std::string fs = fileStream.str();
-	ofs.write(fs.c_str(), fs.length());
+	std::string name = "./spheres" + std::to_string(iteration) + ".ppm";
+	std::ofstream ofs(name, std::ios::out | std::ios::binary);
+	std::string line = "P6\n" + std::to_string(config.width) + " " + std::to_string(config.height) + "\n255\n";
+	ofs.write(line.c_str(), line.length());
 
 	std::string s1s = s1.str();
 	std::string s2s = s2.str();
@@ -394,27 +385,25 @@ int main(int argc, char** argv)
 
 	
 
-	RenderConfig configObject;
-	configObject.width = 640;
-	configObject.height = 480;
-	configObject.CalculateValues();
+	RenderConfig config;
+	config.width = 640;
+	config.height = 480;
+	config.CalculateValues();
 
 	Timer timer;
 
 	Heap* chunkHeap = HeapManager::CreateHeap("ChunkHeap");
 
 	//Allocate a memory pool for the four image chunks 
-	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, 4, sizeof(Vec3f) * configObject.chunkSize);
+	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, 4, sizeof(Vec3f) * config.chunkSize);
 
 	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
 
-	SmoothScaling(configObject);
-	//BasicRender(configObject);
-	//SimpleShrinking(configObject);
-	//RenderFromJSONFile(info, configObject);
-
-	//HeapManager::GetDefaultHeap().DisplayDebugInformation();
+	SmoothScaling(config);
+	//BasicRender(config);
+	//SimpleShrinking(config);
+	//RenderFromJSONFile(info, config);
 
 	float timeToComplete = timer.Mark();
 	std::cout << "Time to complete: " << timeToComplete << std::endl;
@@ -431,7 +420,7 @@ int main(int argc, char** argv)
 	std::cout << "Deleting heaps" << std::endl;
 	HeapManager::CleanHeaps();
 
-	system("ffmpeg -framerate 25 -i spheres%d.ppm -vcodec mpeg4 output.mp4");
+	//system("ffmpeg -framerate 25 -i spheres%d.ppm -vcodec mpeg4 output.mp4");
 	//system("y");
 
 
