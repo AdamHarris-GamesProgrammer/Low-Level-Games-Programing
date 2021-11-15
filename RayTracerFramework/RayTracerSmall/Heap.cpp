@@ -29,18 +29,16 @@ void Heap::DeallocateMemory(Header* header, int size)
 {
 	_totalAllocated -= size;
 
-	//Handle removing the header from the heap's linked list
-	if (header->pNext != NULL) {
-		if (header->pPrevious != NULL) header->pPrevious->pNext = header->pNext;
-		header->pNext->pPrevious = header->pPrevious;
-	}
-	else if (header->pPrevious != NULL) {
-		header->pPrevious->pNext = NULL;
-	}
-
 	//Edge case: The header we are trying to deallocate is the head of the heap's linked list
 	if (pHead == header) {
 		pHead = header->pNext;
+	}
+	if (header->pNext != NULL) {
+		header->pNext->pPrevious = header->pPrevious;
+	}
+
+	if (header->pPrevious != NULL) {
+		header->pPrevious->pNext = header->pNext;
 	}
 }
 

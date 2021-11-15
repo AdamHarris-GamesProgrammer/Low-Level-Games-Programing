@@ -207,11 +207,11 @@ void RenderSector(
 	}
 }
 
-void WriteSector(Vec3f* chunk, int size,std::stringstream& ss) {
+void WriteSector(Vec3f* chunk, int size, std::string& ss) {
 	for (unsigned i = 0; i < size; i++) {
-		ss << (unsigned char)(std::min(1.0f, chunk[i].x) * 255) <<
-			(unsigned char)(std::min(1.0f, chunk[i].y) * 255) <<
-			(unsigned char)(std::min(1.0f, chunk[i].z) * 255);
+		ss += (unsigned char)(std::min(1.0f, chunk[i].x) * 255);
+		ss += (unsigned char)(std::min(1.0f, chunk[i].y) * 255);
+		ss += (unsigned char)(std::min(1.0f, chunk[i].z) * 255);
 	}
 }
 
@@ -244,11 +244,11 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	manager.CreateTask([&config, &fourthChunk, spheres, size] {RenderSector(0, config.halfHeight + config.quarterHeight, config.width, config.height, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(fourthChunk), size); });
 	manager.WaitForAllThreads();
 
-	std::stringstream s1, s2, s3, s4;
-	manager.CreateTask([firstChunk, &config, &s1] {WriteSector(firstChunk, config.chunkSize, s1); });
-	manager.CreateTask([secondChunk, &config, &s2] {WriteSector(secondChunk, config.chunkSize, s2); });
-	manager.CreateTask([thirdChunk, &config, &s3] {WriteSector(thirdChunk, config.chunkSize, s3); });
-	manager.CreateTask([fourthChunk, &config, &s4]{ WriteSector(fourthChunk, config.chunkSize, s4); });
+	std::string t1, t2, t3, t4;
+	manager.CreateTask([firstChunk, &config, &t1] {WriteSector(firstChunk, config.chunkSize, t1); });
+	manager.CreateTask([secondChunk, &config, &t2] {WriteSector(secondChunk, config.chunkSize, t2); });
+	manager.CreateTask([thirdChunk, &config, &t3] {WriteSector(thirdChunk, config.chunkSize, t3); });
+	manager.CreateTask([fourthChunk, &config, &t4] {WriteSector(fourthChunk, config.chunkSize, t4); });
 	manager.WaitForAllThreads();
 
 	chunkPool->Free(firstChunk);
@@ -258,18 +258,14 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 
 	std::string name = "./spheres" + std::to_string(iteration) + ".ppm";
 	std::ofstream ofs(name, std::ios::out | std::ios::binary);
+
 	std::string line = "P6\n" + std::to_string(config.width) + " " + std::to_string(config.height) + "\n255\n";
 	ofs.write(line.c_str(), line.length());
 
-	std::string s1s = s1.str();
-	std::string s2s = s2.str();
-	std::string s3s = s3.str();
-	std::string s4s = s4.str();
-
-	ofs.write(s1s.c_str(), s1s.length());
-	ofs.write(s2s.c_str(), s2s.length());
-	ofs.write(s3s.c_str(), s3s.length());
-	ofs.write(s4s.c_str(), s4s.length());
+	ofs.write(t1.c_str(), t1.length());
+	ofs.write(t2.c_str(), t2.length());
+	ofs.write(t3.c_str(), t3.length());
+	ofs.write(t4.c_str(), t4.length());
 }
 
 void BasicRender(const RenderConfig& config)
@@ -383,7 +379,7 @@ int main(int argc, char** argv)
 	// This sample only allows one choice per program execution. Feel free to improve upon this
 	srand(13);
 
-	
+
 
 	RenderConfig config;
 	config.width = 640;
@@ -412,15 +408,15 @@ int main(int argc, char** argv)
 	chunkPool = nullptr;
 
 	info.Cleanup();
-	
+
 	std::cout << "\n\n" << "HEAP DUMP" << "\n\n";
-	HeapManager::DebugAll();
+	//HeapManager::DebugAll();
 
 
 	std::cout << "Deleting heaps" << std::endl;
 	HeapManager::CleanHeaps();
 
-	//system("ffmpeg -framerate 25 -i spheres%d.ppm -vcodec mpeg4 output.mp4");
+	system("ffmpeg -framerate 25 -i spheres%d.ppm -vcodec mpeg4 output.mp4");
 	//system("y");
 
 
