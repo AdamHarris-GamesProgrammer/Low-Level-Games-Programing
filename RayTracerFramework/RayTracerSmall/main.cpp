@@ -39,6 +39,7 @@
 #include "HeapManager.h"
 #include "JSONReader.h"
 #include "MemoryPool.h"
+#include "ThreadManager.h"
 
 #if defined __linux__ || defined __APPLE__
 // "Compiled for Linux
@@ -235,39 +236,14 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	Vec3f* thirdChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
 	Vec3f* fourthChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
 
+	ThreadManager manager;
 
-	std::thread topQuarter = std::thread([&config, &firstChunk, spheres, size]
-		{
-			RenderSector(0, 0, config.width, config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(firstChunk), size);
-		}
-	);
+	manager.CreateTask([&config, &firstChunk, spheres, size] {RenderSector(0, 0, config.width, config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(firstChunk), size); });
+	manager.CreateTask([&config, &secondChunk, spheres, size] {RenderSector(0, config.quarterHeight, config.width, config.halfHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(secondChunk), size); });
+	manager.CreateTask([&config, &thirdChunk, spheres, size] {RenderSector(0, config.halfHeight, config.width, config.halfHeight + config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(thirdChunk), size); });
+	manager.CreateTask([&config, &fourthChunk, spheres, size] {RenderSector(0, config.halfHeight + config.quarterHeight, config.width, config.height, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(fourthChunk), size); });
 
-
-	std::thread quarterHalf = std::thread([&config, &secondChunk, spheres, size]
-		{
-			RenderSector(0, config.quarterHeight, config.width, config.halfHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(secondChunk), size);
-		}
-	);
-
-	std::thread halfQuarter = std::thread([&config, &thirdChunk, spheres, size]
-		{
-			RenderSector(0, config.halfHeight, config.width, config.halfHeight + config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(thirdChunk), size);
-		}
-	);
-
-	std::thread quarterBottom = std::thread([&config, &fourthChunk, spheres, size]
-		{
-			RenderSector(0, config.halfHeight + config.quarterHeight, config.width, config.height, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(fourthChunk), size);
-		}
-	);
-
-
-
-	topQuarter.join();
-	quarterHalf.join();
-	halfQuarter.join();
-	quarterBottom.join();
-	
+	manager.WaitForAllThreads();
 
 	// Save result to a PPM image (keep these flags if you compile under Windows)
 	std::stringstream ss;
@@ -284,27 +260,11 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	std::stringstream s3;
 	std::stringstream s4;
 
-	std::thread a = std::thread([firstChunk, &config, &s1] 
-		{
-			WriteSector(firstChunk, config.chunkSize, s1);
-		});
-	std::thread b = std::thread([secondChunk, &config, &s2]
-		{
-			WriteSector(secondChunk, config.chunkSize, s2);
-		});
-	std::thread c = std::thread([thirdChunk, &config, &s3]
-		{
-			WriteSector(thirdChunk, config.chunkSize, s3);
-		});
-	std::thread d = std::thread([fourthChunk, &config, &s4]
-		{
-			WriteSector(fourthChunk, config.chunkSize, s4);
-		});
-
-	a.join();
-	b.join();
-	c.join();
-	d.join();
+	manager.CreateTask([firstChunk, &config, &s1] {WriteSector(firstChunk, config.chunkSize, s1); });
+	manager.CreateTask([secondChunk, &config, &s2] {WriteSector(secondChunk, config.chunkSize, s2); });
+	manager.CreateTask([thirdChunk, &config, &s3] {WriteSector(thirdChunk, config.chunkSize, s3); });
+	manager.CreateTask([fourthChunk, &config, &s4]{ WriteSector(fourthChunk, config.chunkSize, s4); });
+	manager.WaitForAllThreads();
 
 	chunkPool->Free(firstChunk);
 	chunkPool->Free(secondChunk);

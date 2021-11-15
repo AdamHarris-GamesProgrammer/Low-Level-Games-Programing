@@ -151,6 +151,7 @@
     <ClCompile Include="JSONReader.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MemoryManager.cpp" />
+    <ClCompile Include="ThreadManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Heap.h" />
@@ -159,6 +160,7 @@
     <ClInclude Include="MemoryManager.h" />
     <ClInclude Include="MemoryPool.h" />
     <ClInclude Include="Sphere.h" />
+    <ClInclude Include="ThreadManager.h" />
     <ClInclude Include="Timer.h" />
     <ClInclude Include="Vec3.h" />
   </ItemGroup>
