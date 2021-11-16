@@ -29,6 +29,11 @@ void Heap::DeallocateMemory(Header* header, int size)
 {
 	_totalAllocated -= size;
 
+	if (_heapchk() != _HEAPOK) {
+		std::cout << "HEAP ERROR FOUND" << std::endl;
+		__debugbreak();
+	}
+
 	//Edge case: The header we are trying to deallocate is the head of the heap's linked list
 	if (pHead == header) {
 		pHead = header->pNext;

@@ -395,8 +395,9 @@ int main(int argc, char** argv)
 
 	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
-
-	SmoothScaling(config);
+	for (unsigned i = 100; i != 0; i--) {
+		SmoothScaling(config);
+	}
 	//BasicRender(config);
 	//SimpleShrinking(config);
 	//RenderFromJSONFile(info, config);
