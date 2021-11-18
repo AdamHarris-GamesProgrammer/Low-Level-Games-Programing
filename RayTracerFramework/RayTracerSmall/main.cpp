@@ -51,6 +51,7 @@
 
 ThreadManager* threadManager;
 MemoryPool* chunkPool;
+MemoryPool* charPool;
 
 //[comment]
 // This variable controls the maximum recursion depth
@@ -211,11 +212,11 @@ void RenderSector(
 void WriteSector(Vec3f* chunk, int size, char* ss) {
 	int charIndex = 0;
 	for (unsigned i = 0; i < size; i++) {
-		ss[charIndex]	= (unsigned char)(std::min(1.0f, chunk[i].x) * 255);
+		ss[charIndex] = (unsigned char)(std::min(1.0f, chunk[i].x) * 255);
 		charIndex++;
-		ss[charIndex]	= (unsigned char)(std::min(1.0f, chunk[i].y) * 255);
+		ss[charIndex] = (unsigned char)(std::min(1.0f, chunk[i].y) * 255);
 		charIndex++;
-		ss[charIndex]	= (unsigned char)(std::min(1.0f, chunk[i].z) * 255);
+		ss[charIndex] = (unsigned char)(std::min(1.0f, chunk[i].z) * 255);
 		charIndex++;
 	}
 }
@@ -239,20 +240,15 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	threadManager->WaitForAllThreads();
 
 	size_t strSize = config.width * config.quarterHeight * 3;
-	char* s1 = new char[strSize];
-	char* s2 = new char[strSize];
-	char* s3 = new char[strSize];
-	char* s4 = new char[strSize];
+	char* s1 = (char*)charPool->Alloc(strSize);
+	char* s2 = (char*)charPool->Alloc(strSize);
+	char* s3 = (char*)charPool->Alloc(strSize);
+	char* s4 = (char*)charPool->Alloc(strSize);
 	threadManager->CreateTask([firstChunk, &config, &s1] {WriteSector(firstChunk, config.chunkSize, s1); });
 	threadManager->CreateTask([secondChunk, &config, &s2] {WriteSector(secondChunk, config.chunkSize, s2); });
 	threadManager->CreateTask([thirdChunk, &config, &s3] {WriteSector(thirdChunk, config.chunkSize, s3); });
 	threadManager->CreateTask([fourthChunk, &config, &s4] {WriteSector(fourthChunk, config.chunkSize, s4); });
 	threadManager->WaitForAllThreads();
-
-	chunkPool->Free(firstChunk);
-	chunkPool->Free(secondChunk);
-	chunkPool->Free(thirdChunk);
-	chunkPool->Free(fourthChunk);
 
 	std::string name = "./spheres" + std::to_string(iteration) + ".ppm";
 	std::ofstream ofs(name, std::ios::out | std::ios::binary);
@@ -264,14 +260,14 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	ofs.write(s4, strSize);
 	ofs.close();
 
-	delete s1;
-	delete s2;
-	delete s3;
-	delete s4;
-	s1 = nullptr;
-	s2 = nullptr;
-	s3 = nullptr;
-	s4 = nullptr;
+	chunkPool->Free(firstChunk);
+	chunkPool->Free(secondChunk);
+	chunkPool->Free(thirdChunk);
+	chunkPool->Free(fourthChunk);
+	charPool->Free(s1);
+	charPool->Free(s2);
+	charPool->Free(s3);
+	charPool->Free(s4);
 }
 
 void BasicRender(const RenderConfig& config)
@@ -385,8 +381,6 @@ int main(int argc, char** argv)
 	// This sample only allows one choice per program execution. Feel free to improve upon this
 	srand(13);
 
-
-
 	RenderConfig config;
 	config.width = 640;
 	config.height = 480;
@@ -397,8 +391,11 @@ int main(int argc, char** argv)
 	Heap* chunkHeap = HeapManager::CreateHeap("ChunkHeap");
 	threadManager = new ThreadManager();
 
+	Heap* charHeap = HeapManager::CreateHeap("CharHeap");
+
 	//Allocate a memory pool for the four image chunks 
 	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, 4, sizeof(Vec3f) * config.chunkSize);
+	charPool = new(charHeap) MemoryPool(charHeap, 4, config.width * config.quarterHeight * 3);
 
 	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
@@ -416,11 +413,13 @@ int main(int argc, char** argv)
 	delete threadManager;
 	threadManager = nullptr;
 
+	delete charPool;
+	charPool = nullptr;
+
 	info.Cleanup();
 
 	std::cout << "\n\n" << "HEAP DUMP" << "\n\n";
-	//HeapManager::DebugAll();
-
+	HeapManager::DebugAll();
 
 	std::cout << "Deleting heaps" << std::endl;
 	HeapManager::CleanHeaps();
