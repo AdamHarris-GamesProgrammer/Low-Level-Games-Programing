@@ -208,21 +208,16 @@ void RenderSector(
 	}
 }
 
-void WriteSector(Vec3f* chunk, int size, std::string& ss) {
+void WriteSector(Vec3f* chunk, int size, char* ss) {
+	int charIndex = 0;
 	for (unsigned i = 0; i < size; i++) {
-		ss += (int)(unsigned char)(std::min(1.0f, chunk[i].x) * 255);
-		ss += (int)(unsigned char)(std::min(1.0f, chunk[i].y) * 255);
-		ss += (int)(unsigned char)(std::min(1.0f, chunk[i].z) * 255);
+		ss[charIndex]	= (unsigned char)(std::min(1.0f, chunk[i].x) * 255);
+		charIndex++;
+		ss[charIndex]	= (unsigned char)(std::min(1.0f, chunk[i].y) * 255);
+		charIndex++;
+		ss[charIndex]	= (unsigned char)(std::min(1.0f, chunk[i].z) * 255);
+		charIndex++;
 	}
-}
-
-std::ostream& operator<<(std::ostream& out, Sphere sphere) {
-	out << "SPHERE INFO\n " << "Position: " << sphere._center
-		<< "\nRadius: " << sphere._radius << "\nSurface Colour: " << sphere._surfaceColor
-		<< "\nEmmision Colour: " << sphere._emissionColor << "\nTransparency: " << sphere._transparency
-		<< "\nReflection: " << sphere._reflection << "\n";
-
-	return out;
 }
 
 //[comment]
@@ -243,16 +238,15 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	threadManager->CreateTask([&config, &fourthChunk, spheres, size] {RenderSector(0, config.halfHeight + config.quarterHeight, config.width, config.height, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(fourthChunk), size); });
 	threadManager->WaitForAllThreads();
 
-	std::string t1, t2, t3, t4;
 	size_t strSize = config.width * config.quarterHeight * 3;
-	t1.reserve(strSize);
-	t2.reserve(strSize);
-	t3.reserve(strSize);
-	t4.reserve(strSize);
-	threadManager->CreateTask([firstChunk, &config, &t1] {WriteSector(firstChunk, config.chunkSize, t1); });
-	threadManager->CreateTask([secondChunk, &config, &t2] {WriteSector(secondChunk, config.chunkSize, t2); });
-	threadManager->CreateTask([thirdChunk, &config, &t3] {WriteSector(thirdChunk, config.chunkSize, t3); });
-	threadManager->CreateTask([fourthChunk, &config, &t4] {WriteSector(fourthChunk, config.chunkSize, t4); });
+	char* s1 = new char[strSize];
+	char* s2 = new char[strSize];
+	char* s3 = new char[strSize];
+	char* s4 = new char[strSize];
+	threadManager->CreateTask([firstChunk, &config, &s1] {WriteSector(firstChunk, config.chunkSize, s1); });
+	threadManager->CreateTask([secondChunk, &config, &s2] {WriteSector(secondChunk, config.chunkSize, s2); });
+	threadManager->CreateTask([thirdChunk, &config, &s3] {WriteSector(thirdChunk, config.chunkSize, s3); });
+	threadManager->CreateTask([fourthChunk, &config, &s4] {WriteSector(fourthChunk, config.chunkSize, s4); });
 	threadManager->WaitForAllThreads();
 
 	chunkPool->Free(firstChunk);
@@ -262,15 +256,22 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 
 	std::string name = "./spheres" + std::to_string(iteration) + ".ppm";
 	std::ofstream ofs(name, std::ios::out | std::ios::binary);
-
 	std::string line = "P6\n" + std::to_string(config.width) + " " + std::to_string(config.height) + "\n255\n";
 	ofs.write(line.c_str(), line.length());
-
-	ofs.write(t1.c_str(), t1.length());
-	ofs.write(t2.c_str(), t2.length());
-	ofs.write(t3.c_str(), t3.length());
-	ofs.write(t4.c_str(), t4.length());
+	ofs.write(s1, strSize);
+	ofs.write(s2, strSize);
+	ofs.write(s3, strSize);
+	ofs.write(s4, strSize);
 	ofs.close();
+
+	delete s1;
+	delete s2;
+	delete s3;
+	delete s4;
+	s1 = nullptr;
+	s2 = nullptr;
+	s3 = nullptr;
+	s4 = nullptr;
 }
 
 void BasicRender(const RenderConfig& config)
@@ -418,13 +419,13 @@ int main(int argc, char** argv)
 	info.Cleanup();
 
 	std::cout << "\n\n" << "HEAP DUMP" << "\n\n";
-	HeapManager::DebugAll();
+	//HeapManager::DebugAll();
 
 
 	std::cout << "Deleting heaps" << std::endl;
 	HeapManager::CleanHeaps();
 
-	//system("ffmpeg -framerate 25 -i spheres%d.ppm -vcodec mpeg4 output.mp4");
+	system("ffmpeg -framerate 25 -i spheres%d.ppm -vcodec mpeg4 output.mp4");
 	return 0;
 
 }
