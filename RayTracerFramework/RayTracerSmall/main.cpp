@@ -209,8 +209,6 @@ void RenderSector(
 }
 
 void WriteSector(Vec3f* chunk, int size, std::string& ss) {
-
-	ss.reserve(100000);
 	for (unsigned i = 0; i < size; i++) {
 		ss += (int)(unsigned char)(std::min(1.0f, chunk[i].x) * 255);
 		ss += (int)(unsigned char)(std::min(1.0f, chunk[i].y) * 255);
@@ -246,6 +244,11 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	threadManager->WaitForAllThreads();
 
 	std::string t1, t2, t3, t4;
+	size_t strSize = config.width * config.quarterHeight * 3;
+	t1.reserve(strSize);
+	t2.reserve(strSize);
+	t3.reserve(strSize);
+	t4.reserve(strSize);
 	threadManager->CreateTask([firstChunk, &config, &t1] {WriteSector(firstChunk, config.chunkSize, t1); });
 	threadManager->CreateTask([secondChunk, &config, &t2] {WriteSector(secondChunk, config.chunkSize, t2); });
 	threadManager->CreateTask([thirdChunk, &config, &t3] {WriteSector(thirdChunk, config.chunkSize, t3); });
