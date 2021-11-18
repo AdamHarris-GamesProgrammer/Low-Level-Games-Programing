@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <mutex>
 #define NAMELENGTH 16
 
 struct Header;
@@ -20,7 +21,10 @@ public:
 	void DisplayDebugInformation();
 	void CheckIntegrity();
 
+	Heap(const Heap&) = default;
+	Heap& operator=(const Heap&) = default;
 private:
+	
 	int _totalAllocated;
 	int _peak;
 	std::string _name;

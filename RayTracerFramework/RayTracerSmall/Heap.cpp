@@ -29,19 +29,12 @@ void Heap::DeallocateMemory(Header* header, int size)
 {
 	_totalAllocated -= size;
 
-	if (_heapchk() != _HEAPOK) {
-		std::cout << "HEAP ERROR FOUND" << std::endl;
-		__debugbreak();
-	}
-
-	//Edge case: The header we are trying to deallocate is the head of the heap's linked list
 	if (pHead == header) {
 		pHead = header->pNext;
 	}
 	if (header->pNext != NULL) {
 		header->pNext->pPrevious = header->pPrevious;
 	}
-
 	if (header->pPrevious != NULL) {
 		header->pPrevious->pNext = header->pNext;
 	}
@@ -75,11 +68,15 @@ void Heap::DisplayDebugInformation()
 
 		Header* pCurrent = pHead;
 		size_t hSize = sizeof(Header);
+
 		while (pCurrent != NULL)
 		{
+			if(pCurrent == NULL) break;
 			auto& startMem = *(pCurrent + hSize);
 			std::cout << &startMem << "\t" << typeid(startMem).name() << "\t" << pCurrent->size << std::endl;
-
+			if (pCurrent->pNext == NULL) {
+				break;
+			}
 			pCurrent = pCurrent->pNext;
 		}
 
@@ -90,8 +87,6 @@ void Heap::DisplayDebugInformation()
 	}
 
 	std::cout << std::endl;
-
-
 }
 
 void Heap::CheckIntegrity()
@@ -111,8 +106,6 @@ void Heap::CheckIntegrity()
 		Header* pCurrent = pHead;
 
 		while (pCurrent != NULL) {
-
-			
 			if (pCurrent->check != deadCode) {
 				SetConsoleTextAttribute(console, red);
 				std::cout << "[ERROR: Heap::CheckIntegrity]: Header check code does not match" << std::endl;

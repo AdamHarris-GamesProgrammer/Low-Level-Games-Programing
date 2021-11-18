@@ -49,6 +49,7 @@
 #define INFINITY 1e8
 #endif
 
+ThreadManager* threadManager;
 MemoryPool* chunkPool;
 
 //[comment]
@@ -208,10 +209,12 @@ void RenderSector(
 }
 
 void WriteSector(Vec3f* chunk, int size, std::string& ss) {
+
+	ss.reserve(100000);
 	for (unsigned i = 0; i < size; i++) {
-		ss += (unsigned char)(std::min(1.0f, chunk[i].x) * 255);
-		ss += (unsigned char)(std::min(1.0f, chunk[i].y) * 255);
-		ss += (unsigned char)(std::min(1.0f, chunk[i].z) * 255);
+		ss += (int)(unsigned char)(std::min(1.0f, chunk[i].x) * 255);
+		ss += (int)(unsigned char)(std::min(1.0f, chunk[i].y) * 255);
+		ss += (int)(unsigned char)(std::min(1.0f, chunk[i].z) * 255);
 	}
 }
 
@@ -236,20 +239,18 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	Vec3f* thirdChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
 	Vec3f* fourthChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
 
-	ThreadManager manager;
-
-	manager.CreateTask([&config, &firstChunk, spheres, size] {RenderSector(0, 0, config.width, config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(firstChunk), size); });
-	manager.CreateTask([&config, &secondChunk, spheres, size] {RenderSector(0, config.quarterHeight, config.width, config.halfHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(secondChunk), size); });
-	manager.CreateTask([&config, &thirdChunk, spheres, size] {RenderSector(0, config.halfHeight, config.width, config.halfHeight + config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(thirdChunk), size); });
-	manager.CreateTask([&config, &fourthChunk, spheres, size] {RenderSector(0, config.halfHeight + config.quarterHeight, config.width, config.height, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(fourthChunk), size); });
-	manager.WaitForAllThreads();
+	threadManager->CreateTask([&config, &firstChunk, spheres, size] {RenderSector(0, 0, config.width, config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(firstChunk), size); });
+	threadManager->CreateTask([&config, &secondChunk, spheres, size] {RenderSector(0, config.quarterHeight, config.width, config.halfHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(secondChunk), size); });
+	threadManager->CreateTask([&config, &thirdChunk, spheres, size] {RenderSector(0, config.halfHeight, config.width, config.halfHeight + config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(thirdChunk), size); });
+	threadManager->CreateTask([&config, &fourthChunk, spheres, size] {RenderSector(0, config.halfHeight + config.quarterHeight, config.width, config.height, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(fourthChunk), size); });
+	threadManager->WaitForAllThreads();
 
 	std::string t1, t2, t3, t4;
-	manager.CreateTask([firstChunk, &config, &t1] {WriteSector(firstChunk, config.chunkSize, t1); });
-	manager.CreateTask([secondChunk, &config, &t2] {WriteSector(secondChunk, config.chunkSize, t2); });
-	manager.CreateTask([thirdChunk, &config, &t3] {WriteSector(thirdChunk, config.chunkSize, t3); });
-	manager.CreateTask([fourthChunk, &config, &t4] {WriteSector(fourthChunk, config.chunkSize, t4); });
-	manager.WaitForAllThreads();
+	threadManager->CreateTask([firstChunk, &config, &t1] {WriteSector(firstChunk, config.chunkSize, t1); });
+	threadManager->CreateTask([secondChunk, &config, &t2] {WriteSector(secondChunk, config.chunkSize, t2); });
+	threadManager->CreateTask([thirdChunk, &config, &t3] {WriteSector(thirdChunk, config.chunkSize, t3); });
+	threadManager->CreateTask([fourthChunk, &config, &t4] {WriteSector(fourthChunk, config.chunkSize, t4); });
+	threadManager->WaitForAllThreads();
 
 	chunkPool->Free(firstChunk);
 	chunkPool->Free(secondChunk);
@@ -266,6 +267,7 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	ofs.write(t2.c_str(), t2.length());
 	ofs.write(t3.c_str(), t3.length());
 	ofs.write(t4.c_str(), t4.length());
+	ofs.close();
 }
 
 void BasicRender(const RenderConfig& config)
@@ -389,15 +391,14 @@ int main(int argc, char** argv)
 	Timer timer;
 
 	Heap* chunkHeap = HeapManager::CreateHeap("ChunkHeap");
+	threadManager = new ThreadManager();
 
 	//Allocate a memory pool for the four image chunks 
 	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, 4, sizeof(Vec3f) * config.chunkSize);
 
 	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
-	for (unsigned i = 100; i != 0; i--) {
-		SmoothScaling(config);
-	}
+	SmoothScaling(config);
 	//BasicRender(config);
 	//SimpleShrinking(config);
 	//RenderFromJSONFile(info, config);
@@ -408,19 +409,19 @@ int main(int argc, char** argv)
 	delete chunkPool;
 	chunkPool = nullptr;
 
+	delete threadManager;
+	threadManager = nullptr;
+
 	info.Cleanup();
 
 	std::cout << "\n\n" << "HEAP DUMP" << "\n\n";
-	//HeapManager::DebugAll();
+	HeapManager::DebugAll();
 
 
 	std::cout << "Deleting heaps" << std::endl;
 	HeapManager::CleanHeaps();
 
-	system("ffmpeg -framerate 25 -i spheres%d.ppm -vcodec mpeg4 output.mp4");
-	//system("y");
-
-
+	//system("ffmpeg -framerate 25 -i spheres%d.ppm -vcodec mpeg4 output.mp4");
 	return 0;
 
 }
