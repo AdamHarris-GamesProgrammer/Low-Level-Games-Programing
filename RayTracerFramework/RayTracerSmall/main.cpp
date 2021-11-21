@@ -44,6 +44,7 @@
 #if defined __linux__ || defined __APPLE__
 // "Compiled for Linux
 #else
+
 // Windows doesn't define these values by default, Linux does
 #define M_PI 3.141592653589793
 #define INFINITY 1e8
@@ -419,7 +420,7 @@ int main(int argc, char** argv)
 	info.Cleanup();
 
 	std::cout << "\n\n" << "HEAP DUMP" << "\n\n";
-	HeapManager::DebugAll();
+	//HeapManager::DebugAll();
 
 	std::cout << "Deleting heaps" << std::endl;
 	HeapManager::CleanHeaps();

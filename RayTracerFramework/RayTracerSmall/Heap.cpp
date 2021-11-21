@@ -2,7 +2,12 @@
 #include "MemoryManager.h"
 #include <iostream>
 #include <typeinfo>
+
+#if defined __linux__
+
+#else 
 #include <Windows.h>
+#endif
 
 Heap::Heap(std::string name) : _totalAllocated(0), _peak(0)
 {
@@ -53,9 +58,11 @@ void* Heap::operator new(size_t size)
 
 void Heap::DisplayDebugInformation()
 {
+	#if defined __windows__
 	HANDLE console;
 	console = GetStdHandle(STD_OUTPUT_HANDLE);
 	SetConsoleTextAttribute(console, 15); //15 = Bright White
+	#endif
 
 	std::cout << "Name: " << _name << std::endl;
 	std::cout << "____________________________________________" << std::endl;
@@ -96,18 +103,22 @@ void Heap::CheckIntegrity()
 	bool errorFound = false;
 	int totalErrors = 0;
 
+	#if defined __windows__
 	HANDLE console;
 	console = GetStdHandle(STD_OUTPUT_HANDLE);
 	int red = 12;
 	int yellow = 14;
 	int brightWhite = 15;
+	#endif
 
 	if (pHead != NULL) {
 		Header* pCurrent = pHead;
 
 		while (pCurrent != NULL) {
 			if (pCurrent->check != deadCode) {
+				#if defined __windows__
 				SetConsoleTextAttribute(console, red);
+				#endif
 				std::cout << "[ERROR: Heap::CheckIntegrity]: Header check code does not match" << std::endl;
 				errorFound = true;
 				totalErrors++;
@@ -116,7 +127,9 @@ void Heap::CheckIntegrity()
 			void* pFooterAddr = ((char*)pCurrent + sizeof(Header) + pCurrent->size);
 			Footer* pFooter = (Footer*)pFooterAddr;
 			if (pFooter->check != deadCode) {
+				#if defined __windows__
 				SetConsoleTextAttribute(console, red);
+				#endif
 				std::cout << "[ERROR: Heap::CheckIntegrity]: Footer check code does not match" << std::endl;
 				errorFound = true;
 				totalErrors++;
@@ -127,14 +140,20 @@ void Heap::CheckIntegrity()
 	}
 
 	if (errorFound) {
+		#if defined __windows
 		SetConsoleTextAttribute(console, red);
+		#endif
 		std::cout << "[ERROR: Heap::CheckIntegrity]: Error(s) found: " << totalErrors << std::endl;
 	}
 	else {
+		#if defined __windows
 		SetConsoleTextAttribute(console, yellow);
+		#endif
 		std::cout << "[MESSAGE: Heap::CheckIntegrity]: No Errors found in " << _name << std::endl;
 	}
 
+	#if defined __windows__
 	SetConsoleTextAttribute(console, brightWhite); 
+	#endif
 }
 
