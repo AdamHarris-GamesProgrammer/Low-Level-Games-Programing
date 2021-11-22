@@ -1,6 +1,6 @@
 #include "JSONReader.h"
 
-JSONSphereInfo& JSONReader::LoadSphereInfoFromFile(const char* filepath)
+JSONSphereInfo* JSONReader::LoadSphereInfoFromFile(const char* filepath)
 {
 	std::fstream file(filepath);
 	
@@ -24,7 +24,7 @@ JSONSphereInfo& JSONReader::LoadSphereInfoFromFile(const char* filepath)
 		std::cout << "[ERROR: JSONReader.cpp: file does not specify number of spheres. Use attribute \"sphereCount\" to specify" << std::endl;
 	}
 
-	JSONSphereInfo animInfo = JSONSphereInfo(noSpheres, noFrames);
+	JSONSphereInfo* animInfo = new JSONSphereInfo(noSpheres, noFrames);
 
 	json sphereArr = jsonFile["spheres"];
 
@@ -33,42 +33,42 @@ JSONSphereInfo& JSONReader::LoadSphereInfoFromFile(const char* filepath)
 		json sphere = sphereArr.at(i);
 
 		if (HasAttribute(&sphere, "startPos")) {
-			animInfo.sphereArr[i]._center = ReadVec3f(sphere["startPos"]);
+			animInfo->sphereArr[i]._center = ReadVec3f(sphere["startPos"]);
 		}
 
 		if (HasAttribute(&sphere, "endPos")) {
-			animInfo.sphereEndPositions[i] = ReadVec3f(sphere["endPos"]);
+			animInfo->sphereEndPositions[i] = ReadVec3f(sphere["endPos"]);
 		}
 
 		if (HasAttribute(&sphere, "radius")) {
 			float radius = sphere["radius"];
-			animInfo.sphereArr[i]._radius = radius;
-			animInfo.sphereArr[i]._radiusSqr = radius * radius;
+			animInfo->sphereArr[i]._radius = radius;
+			animInfo->sphereArr[i]._radiusSqr = radius * radius;
 		}
 
 		if (HasAttribute(&sphere, "surfaceColor")) {
-			animInfo.sphereArr[i]._surfaceColor = ReadVec3f(sphere["surfaceColor"]);
+			animInfo->sphereArr[i]._surfaceColor = ReadVec3f(sphere["surfaceColor"]);
 		}
 
 		if (HasAttribute(&sphere, "reflection")) {
-			animInfo.sphereArr[i]._reflection = sphere["reflection"];
+			animInfo->sphereArr[i]._reflection = sphere["reflection"];
 		}
 
 		if (HasAttribute(&sphere, "transparency")) {
-			animInfo.sphereArr[i]._transparency = sphere["transparency"];
+			animInfo->sphereArr[i]._transparency = sphere["transparency"];
 		}
 
 		if (HasAttribute(&sphere, "emmisionColor")) {
-			animInfo.sphereArr[i]._emissionColor = ReadVec3f(sphere["emmisionColor"]);
+			animInfo->sphereArr[i]._emissionColor = ReadVec3f(sphere["emmisionColor"]);
 		}
 
 		if (HasAttribute(&sphere, "endSurfaceColor")) {
-			animInfo.sphereEndColor[i] = ReadVec3f(sphere["endSurfaceColor"]);
+			animInfo->sphereEndColor[i] = ReadVec3f(sphere["endSurfaceColor"]);
 		}
 	}
 
-	animInfo.CalculateSphereMovements();
-	animInfo.CalculateSphereColor();
+	animInfo->CalculateSphereMovements();
+	animInfo->CalculateSphereColor();
 	return animInfo;
 }
 

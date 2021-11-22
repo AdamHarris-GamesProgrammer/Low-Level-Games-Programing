@@ -69,7 +69,7 @@ struct JSONSphereInfo {
 class JSONReader
 {
 public:
-	static JSONSphereInfo& LoadSphereInfoFromFile(const char* filepath);
+	static JSONSphereInfo* LoadSphereInfoFromFile(const char* filepath);
 
 private:
 	static bool HasAttribute(json* file, std::string key);
