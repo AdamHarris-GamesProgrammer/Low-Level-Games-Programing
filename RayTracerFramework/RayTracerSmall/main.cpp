@@ -212,13 +212,13 @@ void RenderSector(
 
 void WriteSector(Vec3f* chunk, int size, char* ss) {
 	int charIndex = 0;
-	for (unsigned i = 0; i < size; i++) {
+	for (unsigned i = 0; i < size; ++i) {
 		ss[charIndex] = (unsigned char)(std::min(1.0f, chunk[i].x) * 255);
-		charIndex++;
+		++charIndex;
 		ss[charIndex] = (unsigned char)(std::min(1.0f, chunk[i].y) * 255);
-		charIndex++;
+		++charIndex;
 		ss[charIndex] = (unsigned char)(std::min(1.0f, chunk[i].z) * 255);
-		charIndex++;
+		++charIndex;
 	}
 }
 
@@ -300,7 +300,7 @@ void SimpleShrinking(const RenderConfig& config)
 	spheres[2] = Sphere(Vec3f(5.0, -1, -15), 2, Vec3f(0.90, 0.76, 0.46), 1, 0.0);
 	spheres[3] = Sphere(Vec3f(5.0, 0, -25), 3, Vec3f(0.65, 0.77, 0.97), 1, 0.0);
 
-	for (int i = 0; i < 4; i++)
+	for (int i = 0; i < 4; ++i)
 	{
 		if (i == 0)
 		{
@@ -341,7 +341,7 @@ void SmoothScaling(const RenderConfig& config)
 	spheres[2] = Sphere(Vec3f(5.0, -1, -15), 2, Vec3f(0.90, 0.76, 0.46), 1, 0.0);
 	spheres[3] = Sphere(Vec3f(5.0, 0, -25), 3, Vec3f(0.65, 0.77, 0.97), 1, 0.0);
 
-	for (float r = 0; r <= 100; r++)
+	for (float r = 0; r <= 100; ++r)
 	{
 		float radius = r / 100;
 		spheres[1]._radius = radius;
@@ -358,9 +358,9 @@ void SmoothScaling(const RenderConfig& config)
 void RenderFromJSONFile(const JSONSphereInfo& info, const RenderConfig& config) {
 
 	//Iterate through all the frames
-	for (int i = 0; i < info.frameCount; i++) {
+	for (int i = 0; i < info.frameCount; ++i) {
 		//Iterate through all spheres
-		for (int j = 0; j < info.sphereCount; j++) {
+		for (int j = 0; j < info.sphereCount; ++j) {
 			//Change sphere position and surface color
 			info.sphereArr[j]._center += info.sphereMovementsPerFrame[j];
 			info.sphereArr[j]._surfaceColor += info.sphereColorPerFrame[j];
@@ -400,8 +400,8 @@ int main(int argc, char** argv)
 
 	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
-	//SmoothScaling(config);
-	BasicRender(config);
+	SmoothScaling(config);
+	//BasicRender(config);
 	//SimpleShrinking(config);
 	//RenderFromJSONFile(info, config);
 
