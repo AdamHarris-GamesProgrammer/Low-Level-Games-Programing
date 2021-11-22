@@ -348,7 +348,7 @@ void SmoothScaling(const RenderConfig& config)
 		spheres[1]._radiusSqr = radius * radius;
 
 		Render(config, spheres, r, 4);
-		std::cout << "Rendered and saved spheres" << r << ".ppm" << std::endl;
+		//std::cout << "Rendered and saved spheres" << r << ".ppm" << std::endl;
 	}
 
 	delete[] spheres;
@@ -425,7 +425,10 @@ int main(int argc, char** argv)
 	std::cout << "Deleting heaps" << std::endl;
 	HeapManager::CleanHeaps();
 
-	system("ffmpeg -framerate 25 -i spheres%d.ppm -vcodec mpeg4 output.mp4");
+	chunkHeap = nullptr;
+	charHeap = nullptr;
+
+	//system("ffmpeg -framerate 25 -i spheres%d.ppm -vcodec mpeg4 output.mp4");
 	return 0;
 
 }
