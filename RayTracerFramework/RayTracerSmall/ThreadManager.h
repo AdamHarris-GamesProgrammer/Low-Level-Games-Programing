@@ -32,15 +32,17 @@ public:
 		_threads.clear();
 	}
 #else
-	pid_t& CreateTask(std::function<void()> task) {
-		pid_t newThread = fork();
+	void CreateTask(std::function<void()> task) {
+		pid_t newThread = vfork();
 		if(newThread < 0) {
-
-		}else {
-			task();
+			printf("Error: Couldn't create fork");
+		}else if(newThread == 0){
 			_threads.emplace_back(newThread);
+			task();
+			_exit(0);
+		}else{
+
 		}
-		return newThread;
 	}
 
 	void WaitForAllThreads() {

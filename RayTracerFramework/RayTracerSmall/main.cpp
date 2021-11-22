@@ -398,7 +398,7 @@ int main(int argc, char** argv)
 	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, 4, sizeof(Vec3f) * config.chunkSize);
 	charPool = new(charHeap) MemoryPool(charHeap, 4, config.width * config.quarterHeight * 3);
 
-	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
+	//JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
 	SmoothScaling(config);
 	//BasicRender(config);
@@ -417,7 +417,7 @@ int main(int argc, char** argv)
 	delete charPool;
 	charPool = nullptr;
 
-	info.Cleanup();
+	//info.Cleanup();
 
 	std::cout << "\n\n" << "HEAP DUMP" << "\n\n";
 	HeapManager::DebugAll();
