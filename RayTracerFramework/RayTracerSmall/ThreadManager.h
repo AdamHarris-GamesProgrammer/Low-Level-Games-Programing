@@ -2,7 +2,7 @@
 #include <vector>
 #include <functional>
 
-#if defined __windows__
+#if defined _WIN32
 #include <thread>
 #else
 #include <sys/types.h>
@@ -15,7 +15,7 @@
 class ThreadManager
 {
 public:
-#if defined __windows
+#if defined _WIN32
 	std::thread* CreateTask(std::function<void()> task) {
 		std::thread* newThread = new std::thread(task);
 		_threads.emplace_back(newThread);
@@ -59,7 +59,7 @@ public:
 #endif
 
 private:
-#if defined __windows__
+#if defined _WIN32
 	std::vector<std::thread*> _threads;
 #else
 	std::vector<pid_t> _threads;

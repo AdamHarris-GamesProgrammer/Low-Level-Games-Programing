@@ -58,7 +58,7 @@ void* Heap::operator new(size_t size)
 
 void Heap::DisplayDebugInformation()
 {
-	#if defined __windows__
+	#if defined _WIN32
 	HANDLE console;
 	console = GetStdHandle(STD_OUTPUT_HANDLE);
 	SetConsoleTextAttribute(console, 15); //15 = Bright White
@@ -103,7 +103,7 @@ void Heap::CheckIntegrity()
 	bool errorFound = false;
 	int totalErrors = 0;
 
-	#if defined __windows__
+	#if defined _WIN32
 	HANDLE console;
 	console = GetStdHandle(STD_OUTPUT_HANDLE);
 	int red = 12;
@@ -116,7 +116,7 @@ void Heap::CheckIntegrity()
 
 		while (pCurrent != NULL) {
 			if (pCurrent->check != deadCode) {
-				#if defined __windows__
+				#if defined _WIN32
 				SetConsoleTextAttribute(console, red);
 				#endif
 				std::cout << "[ERROR: Heap::CheckIntegrity]: Header check code does not match" << std::endl;
@@ -127,7 +127,7 @@ void Heap::CheckIntegrity()
 			void* pFooterAddr = ((char*)pCurrent + sizeof(Header) + pCurrent->size);
 			Footer* pFooter = (Footer*)pFooterAddr;
 			if (pFooter->check != deadCode) {
-				#if defined __windows__
+				#if defined _WIN32
 				SetConsoleTextAttribute(console, red);
 				#endif
 				std::cout << "[ERROR: Heap::CheckIntegrity]: Footer check code does not match" << std::endl;
@@ -140,19 +140,19 @@ void Heap::CheckIntegrity()
 	}
 
 	if (errorFound) {
-		#if defined __windows
+		#if defined _WIN32
 		SetConsoleTextAttribute(console, red);
 		#endif
 		std::cout << "[ERROR: Heap::CheckIntegrity]: Error(s) found: " << totalErrors << std::endl;
 	}
 	else {
-		#if defined __windows
+		#if defined _WIN32
 		SetConsoleTextAttribute(console, yellow);
 		#endif
 		std::cout << "[MESSAGE: Heap::CheckIntegrity]: No Errors found in " << _name << std::endl;
 	}
 
-	#if defined __windows__
+	#if defined _WIN32
 	SetConsoleTextAttribute(console, brightWhite); 
 	#endif
 }
