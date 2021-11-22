@@ -104,8 +104,6 @@ void Heap::CheckIntegrity()
 	int totalErrors = 0;
 
 	#if defined _WIN32
-	HANDLE console;
-	console = GetStdHandle(STD_OUTPUT_HANDLE);
 	int red = 12;
 	int yellow = 14;
 	int brightWhite = 15;
@@ -116,9 +114,7 @@ void Heap::CheckIntegrity()
 
 		while (pCurrent != NULL) {
 			if (pCurrent->check != deadCode) {
-				#if defined _WIN32
-				SetConsoleTextAttribute(console, red);
-				#endif
+				SetConsoleColor(RED);
 				std::cout << "[ERROR: Heap::CheckIntegrity]: Header check code does not match" << std::endl;
 				errorFound = true;
 				totalErrors++;
@@ -127,9 +123,7 @@ void Heap::CheckIntegrity()
 			void* pFooterAddr = ((char*)pCurrent + sizeof(Header) + pCurrent->size);
 			Footer* pFooter = (Footer*)pFooterAddr;
 			if (pFooter->check != deadCode) {
-				#if defined _WIN32
-				SetConsoleTextAttribute(console, red);
-				#endif
+				SetConsoleColor(RED);
 				std::cout << "[ERROR: Heap::CheckIntegrity]: Footer check code does not match" << std::endl;
 				errorFound = true;
 				totalErrors++;
@@ -140,20 +134,50 @@ void Heap::CheckIntegrity()
 	}
 
 	if (errorFound) {
-		#if defined _WIN32
-		SetConsoleTextAttribute(console, red);
-		#endif
+		SetConsoleColor(RED);
 		std::cout << "[ERROR: Heap::CheckIntegrity]: Error(s) found: " << totalErrors << std::endl;
 	}
 	else {
-		#if defined _WIN32
-		SetConsoleTextAttribute(console, yellow);
-		#endif
+		SetConsoleColor(YELLOW);
 		std::cout << "[MESSAGE: Heap::CheckIntegrity]: No Errors found in " << _name << std::endl;
 	}
 
-	#if defined _WIN32
-	SetConsoleTextAttribute(console, brightWhite); 
-	#endif
+	SetConsoleColor(WHITE);
+}
+
+void Heap::SetConsoleColor(ConsoleColor color)
+{
+#if defined _WIN32
+	HANDLE console;
+	console = GetStdHandle(STD_OUTPUT_HANDLE);
+	int colorCode = 0;
+
+	switch (color)
+	{
+	case WHITE:
+		colorCode = 15;
+		break;
+	case RED:
+		colorCode = 12;
+		break;
+	case YELLOW:
+		colorCode = 14;
+		break;
+	}
+	SetConsoleTextAttribute(console, colorCode);
+#else
+	switch (color) {
+	case WHITE:
+		printf("\033[0m");
+		break;
+	case RED:
+		printf("\033[31m");
+		break;
+	case YELLOW:
+		printf("\033[33m");
+		break;
+	}
+
+#endif
 }
 

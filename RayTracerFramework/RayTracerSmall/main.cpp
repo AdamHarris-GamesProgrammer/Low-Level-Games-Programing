@@ -400,8 +400,8 @@ int main(int argc, char** argv)
 
 	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
-	SmoothScaling(config);
-	//BasicRender(config);
+	//SmoothScaling(config);
+	BasicRender(config);
 	//SimpleShrinking(config);
 	//RenderFromJSONFile(info, config);
 
@@ -420,7 +420,7 @@ int main(int argc, char** argv)
 	info.Cleanup();
 
 	std::cout << "\n\n" << "HEAP DUMP" << "\n\n";
-	//HeapManager::DebugAll();
+	HeapManager::DebugAll();
 
 	std::cout << "Deleting heaps" << std::endl;
 	HeapManager::CleanHeaps();

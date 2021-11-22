@@ -5,6 +5,12 @@
 
 struct Header;
 
+enum ConsoleColor {
+	WHITE,
+	RED,
+	YELLOW
+};
+
 class Heap
 {
 public:
@@ -24,7 +30,8 @@ public:
 	Heap(const Heap&) = default;
 	Heap& operator=(const Heap&) = default;
 private:
-	
+	void SetConsoleColor(ConsoleColor color);
+
 	int _totalAllocated;
 	int _peak;
 	std::string _name;
