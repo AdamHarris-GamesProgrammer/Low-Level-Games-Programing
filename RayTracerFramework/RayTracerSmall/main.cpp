@@ -169,10 +169,12 @@ struct RenderConfig {
 	unsigned height;
 	unsigned chunkHeight;
 	unsigned chunkSize;
+	size_t charSize;
+	size_t vec3Size;
 	float invWidth;
 	float invHeight;
 	float aspectRatio;
-	char buffer[36];
+	char buffer[32];
 
 	void CalculateValues() {
 		chunkHeight = height / MAX_THREADS;
@@ -180,6 +182,8 @@ struct RenderConfig {
 		invWidth = 1 / float(width);
 		invHeight = 1 / float(height);
 		aspectRatio = width / float(height);
+		charSize = chunkSize * 3;
+		vec3Size = chunkSize * sizeof(Vec3f);
 	}
 };
 
@@ -224,22 +228,20 @@ void WriteSector(Vec3f* chunk, int size, char* ss) {
 // trace it and return a color. If the ray hits a sphere, we return the color of the
 // sphere at the intersection point, else we return the background color.
 //[/comment]
-void Render(const RenderConfig config, const Sphere* spheres, const int& iteration, const int& size)
+void Render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
 {
 	Vec3f** chunkArrs = new Vec3f * [MAX_THREADS];
+	char** charArrs = new char* [MAX_THREADS];
 	RenderConfig* renderConfigs = new RenderConfig[MAX_THREADS];
-	for (int i = 0; i < MAX_THREADS; i++)
-	{
-		renderConfigs[i] = config;
-	}
-
-	for (int i = 0; i < MAX_THREADS; i++) {
-		chunkArrs[i] = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
+	for (int i = 0; i < MAX_THREADS; ++i) {
+		renderConfigs[i] = std::ref(config);
+		chunkArrs[i] = (Vec3f*)chunkPool->Alloc(config.vec3Size);
+		charArrs[i] = (char*)charPool->Alloc(config.charSize);
 	}
 
 	int startY = 0;
 	int endY = config.chunkHeight;
-	for (int i = 0; i < MAX_THREADS; i++) {
+	for (int i = 0; i < MAX_THREADS; ++i) {
 		Vec3f* currentChunk = chunkArrs[i];
 		RenderConfig config = renderConfigs[i];
 		threadManager->CreateTask([&config, currentChunk, &spheres, &size, startY, endY] {RenderSector(0, startY, config.width, endY, config.invWidth, config.invHeight, config.aspectRatio, spheres, currentChunk, size); });
@@ -247,15 +249,8 @@ void Render(const RenderConfig config, const Sphere* spheres, const int& iterati
 		endY += config.chunkHeight;
 	}
 
-	char** charArrs = new char* [MAX_THREADS];
-	size_t strSize = config.width * config.chunkHeight * 3;
-	for (int i = 0; i < MAX_THREADS; i++)
-	{
-		charArrs[i] = (char*)charPool->Alloc(strSize);
-	}
-
 	threadManager->WaitForAllThreads();
-	for (int i = 0; i < MAX_THREADS; i++) {
+	for (int i = 0; i < MAX_THREADS; ++i) {
 		char* currentArr = charArrs[i];
 		Vec3f* currentChunk = chunkArrs[i];
 		RenderConfig config = renderConfigs[i];
@@ -268,16 +263,13 @@ void Render(const RenderConfig config, const Sphere* spheres, const int& iterati
 	ofs.write(line.c_str(), line.length());
 
 	threadManager->WaitForAllThreads();
-	for (int i = 0; i < MAX_THREADS; i++) {
-		ofs.write(charArrs[i], strSize);
-	}
-
-	ofs.close();
-
-	for (int i = 0; i < MAX_THREADS; i++) {
+	for (int i = 0; i < MAX_THREADS; ++i) {
+		ofs.write(charArrs[i], config.charSize);
 		chunkPool->Free(chunkArrs[i]);
 		charPool->Free(charArrs[i]);
 	}
+
+	ofs.close();
 }
 
 void BasicRender(const RenderConfig& config)
@@ -405,8 +397,8 @@ int main(int argc, char** argv)
 	Heap* charHeap = HeapManager::CreateHeap("CharHeap");
 
 	//Allocate a memory pool for the four image chunks 
-	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, MAX_THREADS, sizeof(Vec3f) * config.chunkSize);
-	charPool = new(charHeap) MemoryPool(charHeap, MAX_THREADS, config.width * config.chunkHeight * 3);
+	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, MAX_THREADS, config.vec3Size);
+	charPool = new(charHeap) MemoryPool(charHeap, MAX_THREADS, config.charSize);
 
 	JSONSphereInfo* info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
