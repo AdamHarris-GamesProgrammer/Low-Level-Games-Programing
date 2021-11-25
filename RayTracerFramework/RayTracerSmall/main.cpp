@@ -58,7 +58,7 @@ MemoryPool* charPool;
 // This variable controls the maximum recursion depth
 //[/comment]
 #define MAX_RAY_DEPTH 5
-#define MAX_THREADS 1
+#define MAX_THREADS 4
 
 float mix(const float& a, const float& b, const float& mix)
 {
@@ -224,9 +224,14 @@ void WriteSector(Vec3f* chunk, int size, char* ss) {
 // trace it and return a color. If the ray hits a sphere, we return the color of the
 // sphere at the intersection point, else we return the background color.
 //[/comment]
-void Render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
+void Render(const RenderConfig config, const Sphere* spheres, const int& iteration, const int& size)
 {
 	Vec3f** chunkArrs = new Vec3f * [MAX_THREADS];
+	RenderConfig* renderConfigs = new RenderConfig[MAX_THREADS];
+	for (int i = 0; i < MAX_THREADS; i++)
+	{
+		renderConfigs[i] = config;
+	}
 
 	for (int i = 0; i < MAX_THREADS; i++) {
 		chunkArrs[i] = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
@@ -236,6 +241,7 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	int endY = config.chunkHeight;
 	for (int i = 0; i < MAX_THREADS; i++) {
 		Vec3f* currentChunk = chunkArrs[i];
+		RenderConfig config = renderConfigs[i];
 		threadManager->CreateTask([&config, currentChunk, &spheres, &size, startY, endY] {RenderSector(0, startY, config.width, endY, config.invWidth, config.invHeight, config.aspectRatio, spheres, currentChunk, size); });
 		startY += config.chunkHeight;
 		endY += config.chunkHeight;
@@ -252,6 +258,7 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	for (int i = 0; i < MAX_THREADS; i++) {
 		char* currentArr = charArrs[i];
 		Vec3f* currentChunk = chunkArrs[i];
+		RenderConfig config = renderConfigs[i];
 		threadManager->CreateTask([currentChunk, &config, currentArr] {WriteSector(currentChunk, config.chunkSize, currentArr); });
 	}
 
