@@ -58,6 +58,7 @@ MemoryPool* charPool;
 // This variable controls the maximum recursion depth
 //[/comment]
 #define MAX_RAY_DEPTH 5
+#define MAX_THREADS 1
 
 float mix(const float& a, const float& b, const float& mix)
 {
@@ -166,20 +167,16 @@ float angle = tan(M_PI * 0.5 * fov / 180.0f);
 struct RenderConfig {
 	unsigned width;
 	unsigned height;
-	unsigned quarterHeight;
-	unsigned halfHeight;
-	unsigned fullSize;
+	unsigned chunkHeight;
 	unsigned chunkSize;
 	float invWidth;
 	float invHeight;
 	float aspectRatio;
-	char buffer[28];
+	char buffer[36];
 
 	void CalculateValues() {
-		halfHeight = height / 2;
-		quarterHeight = halfHeight / 2;
-		fullSize = width * height;
-		chunkSize = width * (height / 4);
+		chunkHeight = height / MAX_THREADS;
+		chunkSize = (width * height) / MAX_THREADS;
 		invWidth = 1 / float(width);
 		invHeight = 1 / float(height);
 		aspectRatio = width / float(height);
@@ -229,46 +226,51 @@ void WriteSector(Vec3f* chunk, int size, char* ss) {
 //[/comment]
 void Render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
 {
-	Vec3f* firstChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
-	Vec3f* secondChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
-	Vec3f* thirdChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
-	Vec3f* fourthChunk = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
+	Vec3f** chunkArrs = new Vec3f * [MAX_THREADS];
 
-	threadManager->CreateTask([&config, &firstChunk, spheres, size] {RenderSector(0, 0, config.width, config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(firstChunk), size); });
-	threadManager->CreateTask([&config, &secondChunk, spheres, size] {RenderSector(0, config.quarterHeight, config.width, config.halfHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(secondChunk), size); });
-	threadManager->CreateTask([&config, &thirdChunk, spheres, size] {RenderSector(0, config.halfHeight, config.width, config.halfHeight + config.quarterHeight, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(thirdChunk), size); });
-	threadManager->CreateTask([&config, &fourthChunk, spheres, size] {RenderSector(0, config.halfHeight + config.quarterHeight, config.width, config.height, config.invWidth, config.invHeight, config.aspectRatio, spheres, std::ref(fourthChunk), size); });
-	threadManager->WaitForAllThreads();
+	for (int i = 0; i < MAX_THREADS; i++) {
+		chunkArrs[i] = (Vec3f*)chunkPool->Alloc(config.chunkSize * sizeof(Vec3f));
+	}
 
-	size_t strSize = config.width * config.quarterHeight * 3;
-	char* s1 = (char*)charPool->Alloc(strSize);
-	char* s2 = (char*)charPool->Alloc(strSize);
-	char* s3 = (char*)charPool->Alloc(strSize);
-	char* s4 = (char*)charPool->Alloc(strSize);
-	threadManager->CreateTask([firstChunk, &config, &s1] {WriteSector(firstChunk, config.chunkSize, s1); });
-	threadManager->CreateTask([secondChunk, &config, &s2] {WriteSector(secondChunk, config.chunkSize, s2); });
-	threadManager->CreateTask([thirdChunk, &config, &s3] {WriteSector(thirdChunk, config.chunkSize, s3); });
-	threadManager->CreateTask([fourthChunk, &config, &s4] {WriteSector(fourthChunk, config.chunkSize, s4); });
+	int startY = 0;
+	int endY = config.chunkHeight;
+	for (int i = 0; i < MAX_THREADS; i++) {
+		Vec3f* currentChunk = chunkArrs[i];
+		threadManager->CreateTask([&config, currentChunk, &spheres, &size, startY, endY] {RenderSector(0, startY, config.width, endY, config.invWidth, config.invHeight, config.aspectRatio, spheres, currentChunk, size); });
+		startY += config.chunkHeight;
+		endY += config.chunkHeight;
+	}
+
+	char** charArrs = new char* [MAX_THREADS];
+	size_t strSize = config.width * config.chunkHeight * 3;
+	for (int i = 0; i < MAX_THREADS; i++)
+	{
+		charArrs[i] = (char*)charPool->Alloc(strSize);
+	}
+
 	threadManager->WaitForAllThreads();
+	for (int i = 0; i < MAX_THREADS; i++) {
+		char* currentArr = charArrs[i];
+		Vec3f* currentChunk = chunkArrs[i];
+		threadManager->CreateTask([currentChunk, &config, currentArr] {WriteSector(currentChunk, config.chunkSize, currentArr); });
+	}
 
 	std::string name = "./spheres" + std::to_string(iteration) + ".ppm";
 	std::ofstream ofs(name, std::ios::out | std::ios::binary);
 	std::string line = "P6\n" + std::to_string(config.width) + " " + std::to_string(config.height) + "\n255\n";
 	ofs.write(line.c_str(), line.length());
-	ofs.write(s1, strSize);
-	ofs.write(s2, strSize);
-	ofs.write(s3, strSize);
-	ofs.write(s4, strSize);
+
+	threadManager->WaitForAllThreads();
+	for (int i = 0; i < MAX_THREADS; i++) {
+		ofs.write(charArrs[i], strSize);
+	}
+
 	ofs.close();
 
-	chunkPool->Free(firstChunk);
-	chunkPool->Free(secondChunk);
-	chunkPool->Free(thirdChunk);
-	chunkPool->Free(fourthChunk);
-	charPool->Free(s1);
-	charPool->Free(s2);
-	charPool->Free(s3);
-	charPool->Free(s4);
+	for (int i = 0; i < MAX_THREADS; i++) {
+		chunkPool->Free(chunkArrs[i]);
+		charPool->Free(charArrs[i]);
+	}
 }
 
 void BasicRender(const RenderConfig& config)
@@ -385,6 +387,7 @@ int main(int argc, char** argv)
 	RenderConfig config;
 	config.width = 640;
 	config.height = 480;
+
 	config.CalculateValues();
 
 	Timer timer;
@@ -395,10 +398,10 @@ int main(int argc, char** argv)
 	Heap* charHeap = HeapManager::CreateHeap("CharHeap");
 
 	//Allocate a memory pool for the four image chunks 
-	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, 4, sizeof(Vec3f) * config.chunkSize);
-	charPool = new(charHeap) MemoryPool(charHeap, 4, config.width * config.quarterHeight * 3);
+	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, MAX_THREADS, sizeof(Vec3f) * config.chunkSize);
+	charPool = new(charHeap) MemoryPool(charHeap, MAX_THREADS, config.width * config.chunkHeight * 3);
 
-	JSONSphereInfo info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
+	JSONSphereInfo* info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
 	SmoothScaling(config);
 	//BasicRender(config);
@@ -417,10 +420,10 @@ int main(int argc, char** argv)
 	delete charPool;
 	charPool = nullptr;
 
-	info.Cleanup();
+	info->Cleanup();
 
 	std::cout << "\n\n" << "HEAP DUMP" << "\n\n";
-	HeapManager::DebugAll();
+	//HeapManager::DebugAll();
 
 	std::cout << "Deleting heaps" << std::endl;
 	HeapManager::CleanHeaps();

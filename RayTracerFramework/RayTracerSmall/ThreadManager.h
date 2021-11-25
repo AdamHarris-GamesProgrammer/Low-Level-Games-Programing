@@ -16,10 +16,10 @@ class ThreadManager
 {
 public:
 #if defined _WIN32
-	std::thread* CreateTask(std::function<void()> task) {
+	void CreateTask(std::function<void()> task) {
 		std::thread* newThread = new std::thread(task);
 		_threads.emplace_back(newThread);
-		return newThread;
+		//return newThread;
 	}
 
 	void WaitForAllThreads() {
@@ -32,15 +32,17 @@ public:
 		_threads.clear();
 	}
 #else
-	pid_t& CreateTask(std::function<void()> task) {
-		pid_t newThread = fork();
+	void CreateTask(std::function<void()> task) {
+		pid_t newThread = vfork();
 		if(newThread < 0) {
-
-		}else {
-			task();
+			printf("Error: Couldn't create fork");
+		}else if(newThread == 0){
 			_threads.emplace_back(newThread);
+			task();
+			_exit(0);
+		}else{
+
 		}
-		return newThread;
 	}
 
 	void WaitForAllThreads() {
