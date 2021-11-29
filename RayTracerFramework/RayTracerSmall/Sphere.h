@@ -10,7 +10,7 @@ public:
 	float _radius, _radiusSqr;                  /// sphere radius and radius^2
 	Vec3f _surfaceColor, _emissionColor;      /// surface color and emission (light)
 	float _transparency, _reflection;		/// surface transparency and reflectivity
-	Sphere() = default;
+	Sphere() : _radius(1.0f), _radiusSqr(1.0f), _reflection(1.0f), _transparency(1.0f) {}
 	Sphere(
 		const Vec3f& center,
 		const float& radius,

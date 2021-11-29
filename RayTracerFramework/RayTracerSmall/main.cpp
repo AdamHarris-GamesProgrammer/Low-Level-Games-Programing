@@ -111,10 +111,10 @@ Vec3f trace(
 	float bias = 1e-4; // add some bias to the point from which we will be tracing
 	bool inside = false;
 	if (raydir.dot(nhit) > 0) nhit = -nhit, inside = true;
-	if (depth < MAX_RAY_DEPTH && (sphere->_transparency > 0 || sphere->_reflection > 0)) {
+	if (depth < MAX_RAY_DEPTH && (sphere->_transparency > 0.0f || sphere->_reflection > 0.0f)) {
 		float facingratio = -raydir.dot(nhit);
 		// change the mix value to tweak the effect
-		float fresneleffect = mix(pow(1 - facingratio, 3), 1, 0.1);
+		float fresneleffect = mix(pow(1.0f - facingratio, 3.0f), 1.0f, 0.1f);
 		// compute reflection direction (not need to normalize because all vectors
 		// are already normalized)
 		Vec3f refldir = raydir - nhit * 2 * raydir.dot(nhit);
