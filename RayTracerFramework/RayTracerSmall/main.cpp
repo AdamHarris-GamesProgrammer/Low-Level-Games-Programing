@@ -58,7 +58,7 @@ MemoryPool* charPool;
 // This variable controls the maximum recursion depth
 //[/comment]
 #define MAX_RAY_DEPTH 5
-#define MAX_THREADS 4
+#define MAX_THREADS 20
 
 float mix(const float& a, const float& b, const float& mix)
 {
@@ -215,11 +215,9 @@ void WriteSector(Vec3f* chunk, int size, char* ss) {
 	int charIndex = 0;
 	for (unsigned i = 0; i < size; ++i) {
 		ss[charIndex] = (unsigned char)(std::min(1.0f, chunk[i].x) * 255);
-		++charIndex;
-		ss[charIndex] = (unsigned char)(std::min(1.0f, chunk[i].y) * 255);
-		++charIndex;
-		ss[charIndex] = (unsigned char)(std::min(1.0f, chunk[i].z) * 255);
-		++charIndex;
+		ss[charIndex + 1] = (unsigned char)(std::min(1.0f, chunk[i].y) * 255);
+		ss[charIndex + 2] = (unsigned char)(std::min(1.0f, chunk[i].z) * 255);
+		charIndex += 3;
 	}
 }
 
@@ -230,7 +228,7 @@ void WriteSector(Vec3f* chunk, int size, char* ss) {
 //[/comment]
 void Render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
 {
-	Vec3f** chunkArrs = new Vec3f * [MAX_THREADS];
+	Vec3f** chunkArrs = new Vec3f* [MAX_THREADS];
 	char** charArrs = new char* [MAX_THREADS];
 	RenderConfig* renderConfigs = new RenderConfig[MAX_THREADS];
 	for (int i = 0; i < MAX_THREADS; ++i) {
@@ -244,7 +242,7 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	for (int i = 0; i < MAX_THREADS; ++i) {
 		Vec3f* currentChunk = chunkArrs[i];
 		RenderConfig config = renderConfigs[i];
-		threadManager->CreateTask([&config, currentChunk, &spheres, &size, startY, endY] {RenderSector(0, startY, config.width, endY, config.invWidth, config.invHeight, config.aspectRatio, spheres, currentChunk, size); });
+		threadManager->CreateTask([config, currentChunk, &spheres, &size, startY, endY] {RenderSector(0, startY, config.width, endY, config.invWidth, config.invHeight, config.aspectRatio, spheres, currentChunk, size); });
 		startY += config.chunkHeight;
 		endY += config.chunkHeight;
 	}
@@ -254,7 +252,7 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 		char* currentArr = charArrs[i];
 		Vec3f* currentChunk = chunkArrs[i];
 		RenderConfig config = renderConfigs[i];
-		threadManager->CreateTask([currentChunk, &config, currentArr] {WriteSector(currentChunk, config.chunkSize, currentArr); });
+		threadManager->CreateTask([currentChunk, config, currentArr] {WriteSector(currentChunk, config.chunkSize, currentArr); });
 	}
 
 	std::string name = "./spheres" + std::to_string(iteration) + ".ppm";
@@ -270,6 +268,17 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	}
 
 	ofs.close();
+
+	delete[] charArrs;
+	delete[] chunkArrs;
+	delete[] renderConfigs;
+
+	charArrs = nullptr;
+	chunkArrs = nullptr;
+	renderConfigs = nullptr;
+
+	name.clear();
+	line.clear();
 }
 
 void BasicRender(const RenderConfig& config)
@@ -349,7 +358,7 @@ void SmoothScaling(const RenderConfig& config)
 		spheres[1]._radiusSqr = radius * radius;
 
 		Render(config, spheres, r, 4);
-		//std::cout << "Rendered and saved spheres" << r << ".ppm" << std::endl;
+		std::cout << "Rendered and saved spheres" << r << ".ppm" << std::endl;
 	}
 
 	delete[] spheres;
@@ -422,7 +431,7 @@ int main(int argc, char** argv)
 	info->Cleanup();
 
 	std::cout << "\n\n" << "HEAP DUMP" << "\n\n";
-	//HeapManager::DebugAll();
+	HeapManager::DebugAll();
 
 	std::cout << "Deleting heaps" << std::endl;
 	HeapManager::CleanHeaps();
