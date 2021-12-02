@@ -50,7 +50,6 @@
 #define INFINITY 1e8
 #endif
 
-ThreadManager* threadManager;
 MemoryPool* chunkPool;
 MemoryPool* charPool;
 
@@ -242,17 +241,17 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	for (int i = 0; i < MAX_THREADS; ++i) {
 		Vec3f* currentChunk = chunkArrs[i];
 		RenderConfig config = renderConfigs[i];
-		threadManager->CreateTask([config, currentChunk, &spheres, &size, startY, endY] {RenderSector(0, startY, config.width, endY, config.invWidth, config.invHeight, config.aspectRatio, spheres, currentChunk, size); });
+		ThreadManager::CreateTask([config, currentChunk, &spheres, &size, startY, endY] {RenderSector(0, startY, config.width, endY, config.invWidth, config.invHeight, config.aspectRatio, spheres, currentChunk, size); });
 		startY += config.chunkHeight;
 		endY += config.chunkHeight;
 	}
 
-	threadManager->WaitForAllThreads();
+	ThreadManager::WaitForAllThreads();
 	for (int i = 0; i < MAX_THREADS; ++i) {
 		char* currentArr = charArrs[i];
 		Vec3f* currentChunk = chunkArrs[i];
 		RenderConfig config = renderConfigs[i];
-		threadManager->CreateTask([currentChunk, config, currentArr] {WriteSector(currentChunk, config.chunkSize, currentArr); });
+		ThreadManager::CreateTask([currentChunk, config, currentArr] {WriteSector(currentChunk, config.chunkSize, currentArr); });
 	}
 
 	std::string name = "./spheres" + std::to_string(iteration) + ".ppm";
@@ -260,7 +259,7 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	std::string line = "P6\n" + std::to_string(config.width) + " " + std::to_string(config.height) + "\n255\n";
 	ofs.write(line.c_str(), line.length());
 
-	threadManager->WaitForAllThreads();
+	ThreadManager::WaitForAllThreads();
 	for (int i = 0; i < MAX_THREADS; ++i) {
 		ofs.write(charArrs[i], config.charSize);
 		chunkPool->Free(chunkArrs[i]);
@@ -401,7 +400,6 @@ int main(int argc, char** argv)
 	Timer timer;
 
 	Heap* chunkHeap = HeapManager::CreateHeap("ChunkHeap");
-	threadManager = new ThreadManager();
 
 	Heap* charHeap = HeapManager::CreateHeap("CharHeap");
 
@@ -421,9 +419,6 @@ int main(int argc, char** argv)
 
 	delete chunkPool;
 	chunkPool = nullptr;
-
-	delete threadManager;
-	threadManager = nullptr;
 
 	delete charPool;
 	charPool = nullptr;

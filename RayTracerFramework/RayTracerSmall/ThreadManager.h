@@ -16,55 +16,20 @@ class ThreadManager
 {
 public:
 #if defined _WIN32
-	void CreateTask(std::function<void()> task) {
-		std::thread* newThread = new std::thread(task);
-		_threads.emplace_back(newThread);
-		//return newThread;
-	}
+	static void CreateTask(std::function<void()> task);
 
-	void WaitForAllThreads() {
-		for (auto& t : _threads) {
-			t->join();
-			delete t;
-			t = nullptr;
-		}
-
-		_threads.clear();
-	}
+	static void WaitForAllThreads();
 #else
-	void CreateTask(std::function<void()> task) {
-		pid_t newThread = vfork();
-		if(newThread < 0) {
-			printf("Error: Couldn't create fork");
-		}else if(newThread == 0){
-			_threads.emplace_back(newThread);
-			task();
-			_exit(0);
-		}else{
+	static void CreateTask(std::function<void()> task);
 
-		}
-	}
-
-	void WaitForAllThreads() {
-		int status;
-		for (auto& t : _threads) {
-			if(wait(&status) == -1) {
-
-			}
-			else if(WIFEXITED(status)) {
-				
-			}
-		}
-
-		_threads.clear();
-	}
+	static void WaitForAllThreads();
 #endif
 
 private:
 #if defined _WIN32
-	std::vector<std::thread*> _threads;
+	static std::vector<std::thread*> _threads;
 #else
-	std::vector<pid_t> _threads;
+	static std::vector<pid_t> _threads;
 #endif
 
 };
