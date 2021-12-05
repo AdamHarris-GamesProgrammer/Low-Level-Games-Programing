@@ -83,25 +83,26 @@ Vec3f trace(
 {
 	//if (raydir.length() != 1) std::cerr << "Error " << raydir << std::endl;
 	float tnear = INFINITY;
-	const Sphere* sphere = nullptr;
+	const Sphere* hit = nullptr;
 	// find intersection of this ray with the sphere in the scene
-	for (unsigned i = 0; i < size; ++i) {
+	for (size_t i = 0; i < size; ++i) {
+		const Sphere& object = spheres[i];
 		float t0 = INFINITY, t1 = INFINITY;
-		if (spheres[i].intersect(rayorig, raydir, t0, t1)) {
+		if (object.intersect(rayorig, raydir, t0, t1)) {
 			if (t0 < 0) t0 = t1;
 			if (t0 < tnear) {
 				tnear = t0;
-				sphere = &spheres[i];
+				hit = &object;
 			}
 		}
 	}
 
 	// if there's no intersection return black or background color
-	if (!sphere) return Vec3f(2);
+	if (!hit) return Vec3f(2);
 
 	Vec3f surfaceColor = 0; // color of the ray/surface of the object intersected by the ray
 	Vec3f phit = rayorig + raydir * tnear; // point of intersection
-	Vec3f nhit = phit - sphere->_center; // normal at the intersection point
+	Vec3f nhit = phit - hit->_center; // normal at the intersection point
 	nhit.normalize(); // normalize normal direction
 					  // If the normal and the view direction are not opposite to each other
 					  // reverse the normal direction. That also means we are inside the sphere so set
@@ -110,7 +111,7 @@ Vec3f trace(
 	float bias = 1e-4; // add some bias to the point from which we will be tracing
 	bool inside = false;
 	if (raydir.dot(nhit) > 0) nhit = -nhit, inside = true;
-	if (depth < MAX_RAY_DEPTH && (sphere->_transparency > 0.0f || sphere->_reflection > 0.0f)) {
+	if (depth < MAX_RAY_DEPTH && (hit->_transparency > 0.0f || hit->_reflection > 0.0f)) {
 		float facingratio = -raydir.dot(nhit);
 		// change the mix value to tweak the effect
 		float fresneleffect = mix(pow(1.0f - facingratio, 3.0f), 1.0f, 0.1f);
@@ -121,7 +122,7 @@ Vec3f trace(
 		Vec3f reflection = trace(phit + nhit * bias, refldir, spheres, depth + 1, size);
 		Vec3f refraction = 0;
 		// if the sphere is also transparent compute refraction ray (transmission)
-		if (sphere->_transparency) {
+		if (hit->_transparency) {
 			float ior = 1.1, eta = (inside) ? ior : 1 / ior; // are we inside or outside the surface?
 			float cosi = -nhit.dot(raydir);
 			float k = 1 - eta * eta * (1 - cosi * cosi);
@@ -132,7 +133,7 @@ Vec3f trace(
 		// the result is a mix of reflection and refraction (if the sphere is transparent)
 		surfaceColor = (
 			reflection * fresneleffect +
-			refraction * (1 - fresneleffect) * sphere->_transparency) * sphere->_surfaceColor;
+			refraction * (1 - fresneleffect) * hit->_transparency) * hit->_surfaceColor;
 	}
 	else {
 		// it's a diffuse object, no need to ray trace any further
@@ -151,13 +152,13 @@ Vec3f trace(
 						}
 					}
 				}
-				surfaceColor += sphere->_surfaceColor * transmission *
+				surfaceColor += hit->_surfaceColor * transmission *
 					std::max(float(0), nhit.dot(lightDirection)) * spheres[i]._emissionColor;
 			}
 		}
 	}
 
-	return surfaceColor + sphere->_emissionColor;
+	return surfaceColor + hit->_emissionColor;
 }
 
 float fov = 30;
@@ -396,6 +397,8 @@ int main(int argc, char** argv)
 	config.height = 480;
 
 	config.CalculateValues();
+
+	//setHighestTimerResolution(1);
 
 	Timer timer;
 
