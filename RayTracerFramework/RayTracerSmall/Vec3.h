@@ -6,6 +6,7 @@ class Vec3
 {
 public:
 	T x, y, z;
+	char align[4];
 	Vec3() : x(T(0)), y(T(0)), z(T(0)) {}
 	Vec3(T xx) : x(xx), y(xx), z(xx) {}
 	Vec3(T xx, T yy, T zz) : x(xx), y(yy), z(zz) {}

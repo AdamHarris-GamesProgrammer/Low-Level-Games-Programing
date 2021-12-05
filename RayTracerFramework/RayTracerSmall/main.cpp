@@ -409,6 +409,8 @@ int main(int argc, char** argv)
 
 	JSONSphereInfo* info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
+
+	std::cout << sizeof(Sphere) << std::endl;
 	SmoothScaling(config);
 	//BasicRender(config);
 	//SimpleShrinking(config);
