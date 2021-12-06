@@ -59,6 +59,9 @@ MemoryPool* charPool;
 #define MAX_RAY_DEPTH 5
 #define MAX_THREADS 20
 
+//#define NO_MUTEX
+#define MUTEX
+
 float mix(const float& a, const float& b, const float& mix)
 {
 	return b * mix + a * (1 - mix);
@@ -197,7 +200,7 @@ void RenderSector(
 	const float& aspectratio,
 	const Sphere* spheres, Vec3f* image, const int& size)
 {
-
+#ifdef NO_MUTEX
 	int index = 0;
 	for (unsigned y = startY; y < endY; ++y) {
 		for (unsigned x = startX; x < endX; ++x) {
@@ -209,9 +212,27 @@ void RenderSector(
 			index++;
 		}
 	}
+#else
+	int index = endX * startY + startX;
+	std::mutex locker;
+	for (unsigned y = startY; y < endY; ++y) {
+		for (unsigned x = startX; x < endX; ++x) {
+			float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
+			float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
+			Vec3f raydir(xx, yy, -1);
+			raydir.normalize();
+			locker.lock();
+			image[index] = trace(Vec3f(0), raydir, spheres, 0, size);
+			locker.unlock();
+			index++;
+		}
+	}
+	std::cout << index << std::endl;
+#endif // NO_MUTEX
 }
 
 void WriteSector(Vec3f* chunk, int size, char* ss) {
+#ifdef NO_MUTEX
 	int charIndex = 0;
 	for (unsigned i = 0; i < size; ++i) {
 		ss[charIndex] = (unsigned char)(std::min(1.0f, chunk[i].x) * 255);
@@ -219,6 +240,18 @@ void WriteSector(Vec3f* chunk, int size, char* ss) {
 		ss[charIndex + 2] = (unsigned char)(std::min(1.0f, chunk[i].z) * 255);
 		charIndex += 3;
 	}
+#else
+	int charIndex = 0;
+	std::mutex locker;
+	for (unsigned i = 0; i < size; ++i) {
+		locker.lock();
+		ss[charIndex] = (unsigned char)(std::min(1.0f, chunk[i].x) * 255);
+		ss[charIndex + 1] = (unsigned char)(std::min(1.0f, chunk[i].y) * 255);
+		ss[charIndex + 2] = (unsigned char)(std::min(1.0f, chunk[i].z) * 255);
+		locker.unlock();
+		charIndex += 3;
+	}
+#endif //NO_MUTEX
 }
 
 //[comment]
@@ -228,7 +261,8 @@ void WriteSector(Vec3f* chunk, int size, char* ss) {
 //[/comment]
 void Render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
 {
-	Vec3f** chunkArrs = new Vec3f* [MAX_THREADS];
+#ifdef NO_MUTEX
+	Vec3f** chunkArrs = new Vec3f * [MAX_THREADS];
 	char** charArrs = new char* [MAX_THREADS];
 	RenderConfig* renderConfigs = new RenderConfig[MAX_THREADS];
 	for (int i = 0; i < MAX_THREADS; ++i) {
@@ -279,6 +313,53 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 
 	name.clear();
 	line.clear();
+#else
+	Vec3f* image = (Vec3f*)chunkPool->Alloc(config.vec3Size * MAX_THREADS);
+	char* charArray = (char*)charPool->Alloc(config.charSize * MAX_THREADS);
+		
+	int startY = 0;
+	int endY = config.chunkHeight;
+	for (int i = 0; i < MAX_THREADS; ++i) {
+		ThreadManager::CreateTask([config, image, &spheres, &size, startY, endY] {RenderSector(0, startY, config.width, endY, config.invWidth, config.invHeight, config.aspectRatio, spheres, image, size); });
+		startY += config.chunkHeight;
+		endY += config.chunkHeight;
+	}
+	ThreadManager::WaitForAllThreads();
+	//for (int i = 0; i < MAX_THREADS; ++i) {
+	//	ThreadManager::CreateTask([image, config, charArray] {WriteSector(image, config.chunkSize * MAX_THREADS, charArray); });
+	//}
+
+	int charIndex = 0;
+	std::mutex locker;
+	for (unsigned i = 0; i < config.chunkSize * MAX_THREADS; ++i) {
+		locker.lock();
+		charArray[charIndex] = (unsigned char)(std::min(1.0f, image[i].x) * 255);
+		charArray[charIndex + 1] = (unsigned char)(std::min(1.0f, image[i].y) * 255);
+		charArray[charIndex + 2] = (unsigned char)(std::min(1.0f, image[i].z) * 255);
+		charIndex += 3;
+		locker.unlock();
+		
+	}
+
+	std::cout << image[200000] << std::endl;
+
+	std::string name = "./spheres" + std::to_string(iteration) + ".ppm";
+	std::ofstream ofs(name, std::ios::out | std::ios::binary);
+	std::string line = "P6\n" + std::to_string(config.width) + " " + std::to_string(config.height) + "\n255\n";
+	ofs.write(line.c_str(), line.length());
+
+	ThreadManager::WaitForAllThreads();
+
+	ofs.write(charArray, charIndex);
+	
+	chunkPool->Free(image);
+	charPool->Free(charArray);
+
+	ofs.close();
+
+	name.clear();
+	line.clear();
+#endif // NO_MUTEX
 }
 
 void BasicRender(const RenderConfig& config)
@@ -407,8 +488,14 @@ int main(int argc, char** argv)
 	Heap* charHeap = HeapManager::CreateHeap("CharHeap");
 
 	//Allocate a memory pool for the four image chunks 
+#ifdef NO_MUTEX
 	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, MAX_THREADS, config.vec3Size);
 	charPool = new(charHeap) MemoryPool(charHeap, MAX_THREADS, config.charSize);
+#else
+	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, 1, config.vec3Size * MAX_THREADS);
+	charPool = new(charHeap) MemoryPool(charHeap, 1, config.charSize * MAX_THREADS);
+#endif
+
 
 	JSONSphereInfo* info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
