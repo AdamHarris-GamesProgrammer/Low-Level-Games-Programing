@@ -59,7 +59,7 @@ MemoryPool* charPool;
 #define MAX_RAY_DEPTH 5
 #define MAX_THREADS 20
 
-//#define NO_MUTEX
+#define NO_MUTEX
 
 
 float mix(const float& a, const float& b, const float& mix)
@@ -322,8 +322,9 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 				int charStartIndex = config.width * (config.chunkHeight * 3) * i;
 				WriteSector(image, config.chunkSize, charArray, startingIndex, charStartIndex);
 			});
+		startY += config.chunkHeight;
+		endY += config.chunkHeight;
 	}
-	
 	std::string name = "./spheres" + std::to_string(iteration) + ".ppm";
 	std::ofstream ofs(name, std::ios::out | std::ios::binary);
 	std::string line = "P6\n" + std::to_string(config.width) + " " + std::to_string(config.height) + "\n255\n";
@@ -476,7 +477,6 @@ int main(int argc, char** argv)
 	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, 1, config.vec3Size * MAX_THREADS);
 	charPool = new(charHeap) MemoryPool(charHeap, 1, config.charSize * MAX_THREADS);
 #endif
-
 
 	JSONSphereInfo* info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
