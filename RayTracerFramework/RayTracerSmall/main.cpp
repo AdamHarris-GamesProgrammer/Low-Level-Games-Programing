@@ -60,7 +60,7 @@ MemoryPool* charPool;
 #define MAX_THREADS 20
 
 //#define NO_MUTEX
-#define MUTEX
+
 
 float mix(const float& a, const float& b, const float& mix)
 {
@@ -227,12 +227,11 @@ void RenderSector(
 			index++;
 		}
 	}
-	std::cout << index << std::endl;
 #endif // NO_MUTEX
 }
 
+#ifdef NO_MUTEX 
 void WriteSector(Vec3f* chunk, int size, char* ss) {
-#ifdef NO_MUTEX
 	int charIndex = 0;
 	for (unsigned i = 0; i < size; ++i) {
 		ss[charIndex] = (unsigned char)(std::min(1.0f, chunk[i].x) * 255);
@@ -240,19 +239,18 @@ void WriteSector(Vec3f* chunk, int size, char* ss) {
 		ss[charIndex + 2] = (unsigned char)(std::min(1.0f, chunk[i].z) * 255);
 		charIndex += 3;
 	}
-#else
-	int charIndex = 0;
-	std::mutex locker;
-	for (unsigned i = 0; i < size; ++i) {
-		locker.lock();
-		ss[charIndex] = (unsigned char)(std::min(1.0f, chunk[i].x) * 255);
-		ss[charIndex + 1] = (unsigned char)(std::min(1.0f, chunk[i].y) * 255);
-		ss[charIndex + 2] = (unsigned char)(std::min(1.0f, chunk[i].z) * 255);
-		locker.unlock();
-		charIndex += 3;
-	}
-#endif //NO_MUTEX
 }
+#else 
+void WriteSector(Vec3f* chunk, int size, char* ss, int startingIndex, int charStartIndex) {
+	int charIndex = charStartIndex;
+	for (unsigned i = startingIndex; i < startingIndex + size; ++i) {
+		ss[charIndex] =		(unsigned char)(std::min(1.0f, chunk[i].x) * 255);
+		ss[charIndex + 1] = (unsigned char)(std::min(1.0f, chunk[i].y) * 255);
+		ss[charIndex + 2] = (unsigned char)(std::min(1.0f, chunk[i].z) * 255);
+		charIndex += 3;
+	}
+}
+#endif
 
 //[comment]
 // Main rendering function. We compute a camera ray for each pixel of the image
@@ -275,18 +273,15 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	int endY = config.chunkHeight;
 	for (int i = 0; i < MAX_THREADS; ++i) {
 		Vec3f* currentChunk = chunkArrs[i];
+		char* currentArr = charArrs[i];
 		RenderConfig config = renderConfigs[i];
-		ThreadManager::CreateTask([config, currentChunk, &spheres, &size, startY, endY] {RenderSector(0, startY, config.width, endY, config.invWidth, config.invHeight, config.aspectRatio, spheres, currentChunk, size); });
+		ThreadManager::CreateTask([config, currentChunk, &spheres, &size, startY, endY, currentArr] 
+			{
+				RenderSector(0, startY, config.width, endY, config.invWidth, config.invHeight, config.aspectRatio, spheres, currentChunk, size); 
+				WriteSector(currentChunk, config.chunkSize, currentArr);
+			});
 		startY += config.chunkHeight;
 		endY += config.chunkHeight;
-	}
-
-	ThreadManager::WaitForAllThreads();
-	for (int i = 0; i < MAX_THREADS; ++i) {
-		char* currentArr = charArrs[i];
-		Vec3f* currentChunk = chunkArrs[i];
-		RenderConfig config = renderConfigs[i];
-		ThreadManager::CreateTask([currentChunk, config, currentArr] {WriteSector(currentChunk, config.chunkSize, currentArr); });
 	}
 
 	std::string name = "./spheres" + std::to_string(iteration) + ".ppm";
@@ -320,29 +315,15 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	int startY = 0;
 	int endY = config.chunkHeight;
 	for (int i = 0; i < MAX_THREADS; ++i) {
-		ThreadManager::CreateTask([config, image, &spheres, &size, startY, endY] {RenderSector(0, startY, config.width, endY, config.invWidth, config.invHeight, config.aspectRatio, spheres, image, size); });
-		startY += config.chunkHeight;
-		endY += config.chunkHeight;
+		ThreadManager::CreateTask([config, image, &spheres, &size, startY, endY, charArray, i] 
+			{
+				RenderSector(0, startY, config.width, endY, config.invWidth, config.invHeight, config.aspectRatio, spheres, image, size); 
+				int startingIndex = (config.width * config.chunkHeight) * i;
+				int charStartIndex = config.width * (config.chunkHeight * 3) * i;
+				WriteSector(image, config.chunkSize, charArray, startingIndex, charStartIndex);
+			});
 	}
-	ThreadManager::WaitForAllThreads();
-	//for (int i = 0; i < MAX_THREADS; ++i) {
-	//	ThreadManager::CreateTask([image, config, charArray] {WriteSector(image, config.chunkSize * MAX_THREADS, charArray); });
-	//}
-
-	int charIndex = 0;
-	std::mutex locker;
-	for (unsigned i = 0; i < config.chunkSize * MAX_THREADS; ++i) {
-		locker.lock();
-		charArray[charIndex] = (unsigned char)(std::min(1.0f, image[i].x) * 255);
-		charArray[charIndex + 1] = (unsigned char)(std::min(1.0f, image[i].y) * 255);
-		charArray[charIndex + 2] = (unsigned char)(std::min(1.0f, image[i].z) * 255);
-		charIndex += 3;
-		locker.unlock();
-		
-	}
-
-	std::cout << image[200000] << std::endl;
-
+	
 	std::string name = "./spheres" + std::to_string(iteration) + ".ppm";
 	std::ofstream ofs(name, std::ios::out | std::ios::binary);
 	std::string line = "P6\n" + std::to_string(config.width) + " " + std::to_string(config.height) + "\n255\n";
@@ -350,7 +331,7 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 
 	ThreadManager::WaitForAllThreads();
 
-	ofs.write(charArray, charIndex);
+	ofs.write(charArray, config.charSize * MAX_THREADS);
 	
 	chunkPool->Free(image);
 	charPool->Free(charArray);
