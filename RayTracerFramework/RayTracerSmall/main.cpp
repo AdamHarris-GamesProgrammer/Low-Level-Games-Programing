@@ -205,6 +205,17 @@ void RenderSector(
 #else
 	int index = endX * startY + startX;
 #endif
+	//for (unsigned y = startY; y < endY; ++y) {
+	//	for (unsigned x = startX; x < endX; ++x) {
+	//		float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
+	//		float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
+	//		Vec3f raydir(xx, yy, -1);
+	//		raydir.normalize();
+	//		image[index] = trace(Vec3f(0), raydir, spheres, 0, size);
+	//		index++;
+	//	}
+	//}
+
 	for (unsigned y = startY; y < endY; ++y) {
 		for (unsigned x = startX; x < endX; ++x) {
 			float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
