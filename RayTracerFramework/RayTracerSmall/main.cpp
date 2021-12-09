@@ -57,9 +57,9 @@ MemoryPool* charPool;
 // This variable controls the maximum recursion depth
 //[/comment]
 #define MAX_RAY_DEPTH 5
-#define MAX_THREADS 20
+#define MAX_THREADS 4
 
-#define NO_MUTEX
+//#define MULTIPLE_CONTAINERS
 
 
 float mix(const float& a, const float& b, const float& mix)
@@ -200,7 +200,7 @@ void RenderSector(
 	const float& aspectratio,
 	const Sphere* spheres, Vec3f* image, const int& size)
 {
-#ifdef NO_MUTEX
+#ifdef MULTIPLE_CONTAINERS
 	int index = 0;
 	for (unsigned y = startY; y < endY; ++y) {
 		for (unsigned x = startX; x < endX; ++x) {
@@ -221,16 +221,14 @@ void RenderSector(
 			float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
 			Vec3f raydir(xx, yy, -1);
 			raydir.normalize();
-			locker.lock();
 			image[index] = trace(Vec3f(0), raydir, spheres, 0, size);
-			locker.unlock();
 			index++;
 		}
 	}
-#endif // NO_MUTEX
+#endif // MULTIPLE_CONTAINERS
 }
 
-#ifdef NO_MUTEX 
+#ifdef MULTIPLE_CONTAINERS 
 void WriteSector(Vec3f* chunk, int size, char* ss) {
 	int charIndex = 0;
 	for (unsigned i = 0; i < size; ++i) {
@@ -259,7 +257,7 @@ void WriteSector(Vec3f* chunk, int size, char* ss, int startingIndex, int charSt
 //[/comment]
 void Render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
 {
-#ifdef NO_MUTEX
+#ifdef MULTIPLE_CONTAINERS
 	Vec3f** chunkArrs = new Vec3f * [MAX_THREADS];
 	char** charArrs = new char* [MAX_THREADS];
 	RenderConfig* renderConfigs = new RenderConfig[MAX_THREADS];
@@ -341,7 +339,7 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 
 	name.clear();
 	line.clear();
-#endif // NO_MUTEX
+#endif // MULTIPLE_CONTAINERS
 }
 
 void BasicRender(const RenderConfig& config)
@@ -470,7 +468,7 @@ int main(int argc, char** argv)
 	Heap* charHeap = HeapManager::CreateHeap("CharHeap");
 
 	//Allocate a memory pool for the four image chunks 
-#ifdef NO_MUTEX
+#ifdef MULTIPLE_CONTAINERS
 	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, MAX_THREADS, config.vec3Size);
 	charPool = new(charHeap) MemoryPool(charHeap, MAX_THREADS, config.charSize);
 #else
