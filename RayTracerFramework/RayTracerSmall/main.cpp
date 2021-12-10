@@ -31,6 +31,8 @@
 #include <sstream>
 #include <string>
 
+#include <ppl.h>
+
 #include "Heap.h"
 #include "Timer.h"
 #include "Vec3.h"
@@ -59,8 +61,9 @@ MemoryPool* charPool;
 #define MAX_RAY_DEPTH 5
 #define MAX_THREADS 4
 
-//#define MULTIPLE_CONTAINERS
 
+//#define MULTIPLE_CONTAINERS
+//#define USE_PARALLEL_FOR
 
 float mix(const float& a, const float& b, const float& mix)
 {
@@ -201,40 +204,69 @@ void RenderSector(
 	const Sphere* spheres, Vec3f* image, const int& size)
 {
 #ifdef MULTIPLE_CONTAINERS
-	int index = 0;
+#ifdef USE_PARALLEL_FOR
+	//Using multiple containers and parallel_for
+	concurrency::parallel_for(startY, endY, [image, &spheres, &size, &startX, &endY, &endX, &invWidth, &invHeight, &aspectratio, &startY](size_t y)
+		{
+			for (unsigned x = startX; x < endX; ++x) {
+				float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
+				float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
+				Vec3f raydir(xx, yy, -1);
+				raydir.normalize();
+				//The index is calculated as endX * (y - startY) + x. (y - startY) gets the difference between startY and y allowing us to properly cycle through multiple containers
+				image[endX * (y - startY) + x] = trace(Vec3f(0), raydir, spheres, 0, size);
+			}
+		});
 #else
-	int index = endX * startY + startX;
-#endif
-	//for (unsigned y = startY; y < endY; ++y) {
-	//	for (unsigned x = startX; x < endX; ++x) {
-	//		float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
-	//		float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
-	//		Vec3f raydir(xx, yy, -1);
-	//		raydir.normalize();
-	//		image[index] = trace(Vec3f(0), raydir, spheres, 0, size);
-	//		index++;
-	//	}
-	//}
-
+	//Using multiple containers but without parallel_for
+	int index = 0;
 	for (unsigned y = startY; y < endY; ++y) {
-		for (unsigned x = startX; x < endX; ++x) {
+		for (unsigned x = startX; x < endX; ++x, index++) {
 			float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
 			float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
 			Vec3f raydir(xx, yy, -1);
 			raydir.normalize();
 			image[index] = trace(Vec3f(0), raydir, spheres, 0, size);
-			index++;
 		}
 	}
+#endif // USE_PARALLEL_FOR
+#else
+#ifdef USE_PARALLEL_FOR
+	//Using one container with parallel_for
+	concurrency::parallel_for(startY, endY, [image, &spheres, &size, &startX, &endX, &invWidth, &invHeight, &aspectratio](size_t y)
+		{
+			for (unsigned x = startX; x < endX; ++x) {
+				float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
+				float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
+				Vec3f raydir(xx, yy, -1);
+				raydir.normalize();
+				image[endX * y + x] = trace(Vec3f(0), raydir, spheres, 0, size);
 }
+		});
+#else
+	//Using one container without parallel_for
+	int index = endX * startY + startX;
+	for (unsigned y = startY; y < endY; ++y) {
+		for (unsigned x = startX; x < endX; ++x, index++) {
+			float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
+			float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
+			Vec3f raydir(xx, yy, -1);
+			raydir.normalize();
+			image[index] = trace(Vec3f(0), raydir, spheres, 0, size);
+}
+	}
+#endif // USE_PARALLEL_FOR
+#endif // MULTIPLE_CONTAINERS
+}
+
 
 #ifdef MULTIPLE_CONTAINERS 
 void WriteSector(Vec3f* chunk, int size, char* ss) {
 	int charIndex = 0;
 	for (unsigned i = 0; i < size; ++i) {
-		ss[charIndex] = (unsigned char)(std::min(1.0f, chunk[i].x) * 255);
-		ss[charIndex + 1] = (unsigned char)(std::min(1.0f, chunk[i].y) * 255);
-		ss[charIndex + 2] = (unsigned char)(std::min(1.0f, chunk[i].z) * 255);
+		ss[charIndex] =		(unsigned char)((1.0f < chunk[i].x ? 1.0f : chunk[i].x) * 255);
+		ss[charIndex + 1] = (unsigned char)((1.0f < chunk[i].y ? 1.0f : chunk[i].y) * 255);
+		ss[charIndex + 2] = (unsigned char)((1.0f < chunk[i].z ? 1.0f : chunk[i].z) * 255);
 		charIndex += 3;
 	}
 }
@@ -242,9 +274,9 @@ void WriteSector(Vec3f* chunk, int size, char* ss) {
 void WriteSector(Vec3f* chunk, int size, char* ss, int startingIndex, int charStartIndex) {
 	int charIndex = charStartIndex;
 	for (unsigned i = startingIndex; i < startingIndex + size; ++i) {
-		ss[charIndex] =		(unsigned char)(std::min(1.0f, chunk[i].x) * 255);
-		ss[charIndex + 1] = (unsigned char)(std::min(1.0f, chunk[i].y) * 255);
-		ss[charIndex + 2] = (unsigned char)(std::min(1.0f, chunk[i].z) * 255);
+		ss[charIndex] =		(unsigned char)((1.0f < chunk[i].x ? 1.0f : chunk[i].x) * 255);
+		ss[charIndex + 1] = (unsigned char)((1.0f < chunk[i].y ? 1.0f : chunk[i].y) * 255);
+		ss[charIndex + 2] = (unsigned char)((1.0f < chunk[i].z ? 1.0f : chunk[i].z) * 255);
 		charIndex += 3;
 	}
 }
@@ -458,8 +490,6 @@ int main(int argc, char** argv)
 	config.height = 480;
 
 	config.CalculateValues();
-
-	//setHighestTimerResolution(1);
 
 	Timer timer;
 
