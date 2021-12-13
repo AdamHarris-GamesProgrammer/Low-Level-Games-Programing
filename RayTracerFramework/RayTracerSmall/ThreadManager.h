@@ -15,16 +15,8 @@
 class ThreadManager
 {
 public:
-#if defined _WIN32
 	static void CreateTask(std::function<void()> task);
-
 	static void WaitForAllThreads();
-#else
-	static void CreateTask(std::function<void()> task);
-
-	static void WaitForAllThreads();
-#endif
-
 private:
 #if defined _WIN32
 	static std::vector<std::thread*> _threads;

@@ -1,7 +1,5 @@
 #pragma once
 #include <iostream>
-#include <mutex>
-#define NAMELENGTH 16
 
 struct Header;
 

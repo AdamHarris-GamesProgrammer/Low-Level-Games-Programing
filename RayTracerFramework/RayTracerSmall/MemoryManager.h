@@ -7,7 +7,6 @@
 struct Header {
 	int size;
 	int check = deadCode;
-	int allocNumSize;
 	Heap* pHeap;
 	Header* pPrevious = NULL;
 	Header* pNext = NULL;

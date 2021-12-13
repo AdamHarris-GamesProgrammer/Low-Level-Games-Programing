@@ -31,6 +31,8 @@
 #include <sstream>
 #include <string>
 
+#include <immintrin.h>
+
 #include <ppl.h>
 
 #include "Heap.h"

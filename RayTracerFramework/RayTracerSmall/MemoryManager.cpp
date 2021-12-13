@@ -21,8 +21,6 @@ void* operator new(size_t size, Heap* heap) {
 	Footer* pFooter = (Footer*)pFooterAddr;
 	pFooter->check = deadCode;
 
-	//TODO: Setup reserving memory 
-
 	void* pStartMemBlock = pMem + sizeof(Header);
 	return pStartMemBlock;
 }

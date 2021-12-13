@@ -58,11 +58,7 @@ void* Heap::operator new(size_t size)
 
 void Heap::DisplayDebugInformation()
 {
-	#if defined _WIN32
-	HANDLE console;
-	console = GetStdHandle(STD_OUTPUT_HANDLE);
-	SetConsoleTextAttribute(console, 15); //15 = Bright White
-	#endif
+	SetConsoleColor(WHITE);
 
 	std::cout << "Name: " << _name << std::endl;
 	std::cout << "____________________________________________" << std::endl;
@@ -73,9 +69,10 @@ void Heap::DisplayDebugInformation()
 		std::cout << "ADDRESS\t\t\tTYPE\t\tSIZE" << std::endl;
 		std::cout << "____________________________________________" << std::endl;
 
-		Header* pCurrent = pHead;
+
 		size_t hSize = sizeof(Header);
 
+		Header* pCurrent = pHead;
 		while (pCurrent != NULL)
 		{
 			if(pCurrent == NULL) break;
