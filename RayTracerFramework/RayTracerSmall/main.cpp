@@ -54,8 +54,7 @@
 #define INFINITY 1e8
 #endif
 
-MemoryPool* chunkPool;
-MemoryPool* charPool;
+
 
 //[comment]
 // This variable controls the maximum recursion depth
@@ -64,8 +63,14 @@ MemoryPool* charPool;
 #define MAX_THREADS 4
 
 
-//#define MULTIPLE_CONTAINERS
-//#define USE_PARALLEL_FOR
+#define MULTIPLE_CONTAINERS
+#define USE_PARALLEL_FOR
+#define USE_MEMORY_POOLS
+
+#ifdef USE_MEMORY_POOLS
+MemoryPool* chunkPool;
+MemoryPool* charPool;
+#endif
 
 inline float mix(const float& a, const float& b, const float& mix)
 {
@@ -291,14 +296,24 @@ void WriteSector(Vec3f* chunk, int size, char* ss, int startingIndex, int charSt
 //[/comment]
 void Render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
 {
+#ifndef USE_MEMORY_POOLS
+	Heap* chunkHeap = HeapManager::GetHeap("ChunkHeap");
+	Heap* charHeap = HeapManager::GetHeap("CharHeap");
+#endif
+
 #ifdef MULTIPLE_CONTAINERS
 	Vec3f** chunkArrs = new Vec3f * [MAX_THREADS];
 	char** charArrs = new char* [MAX_THREADS];
 	RenderConfig* renderConfigs = new RenderConfig[MAX_THREADS];
 	for (int i = 0; i < MAX_THREADS; ++i) {
 		renderConfigs[i] = std::ref(config);
+#ifdef USE_MEMORY_POOLS
 		chunkArrs[i] = (Vec3f*)chunkPool->Alloc(config.vec3Size);
 		charArrs[i] = (char*)charPool->Alloc(config.charSize);
+#else
+		chunkArrs[i] = new Vec3f[config.chunkSize];
+		charArrs[i] = new char[config.charSize];
+#endif
 	}
 
 	int startY = 0;
@@ -324,8 +339,17 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	ThreadManager::WaitForAllThreads();
 	for (int i = 0; i < MAX_THREADS; ++i) {
 		ofs.write(charArrs[i], config.charSize);
+#ifdef USE_MEMORY_POOLS
 		chunkPool->Free(chunkArrs[i]);
 		charPool->Free(charArrs[i]);
+#else
+		delete[] chunkArrs[i];
+		delete[] charArrs[i];
+		charArrs[i] = nullptr;
+		charArrs[i] = nullptr;
+#endif // USE_MEMORY_POOLS
+
+		
 	}
 
 	ofs.close();
@@ -341,9 +365,14 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	name.clear();
 	line.clear();
 #else
-	Vec3f* image = (Vec3f*)chunkPool->Alloc(config.vec3Size * MAX_THREADS);
+#ifdef USE_MEMORY_POOLS
+	Vec3f* image = (Vec3f*)chunkPool->Alloc(config.chunkSize * MAX_THREADS);
 	char* charArray = (char*)charPool->Alloc(config.charSize * MAX_THREADS);
-		
+#else
+	Vec3f* image = new Vec3f[config.chunkSize * MAX_THREADS];
+	char* charArray = new char[config.charSize * MAX_THREADS];
+#endif	
+
 	int startY = 0;
 	int endY = config.chunkHeight;
 	for (int i = 0; i < MAX_THREADS; ++i) {
@@ -366,8 +395,15 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 
 	ofs.write(charArray, config.charSize * MAX_THREADS);
 	
+#ifdef USE_MEMORY_POOLS
 	chunkPool->Free(image);
 	charPool->Free(charArray);
+#else
+	delete[] image;
+	image = nullptr;
+	delete[] charArray;
+	charArray = nullptr;
+#endif
 
 	ofs.close();
 
@@ -499,6 +535,7 @@ int main(int argc, char** argv)
 
 	Heap* charHeap = HeapManager::CreateHeap("CharHeap");
 
+#ifdef USE_MEMORY_POOLS
 	//Allocate a memory pool for the four image chunks 
 #ifdef MULTIPLE_CONTAINERS
 	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, MAX_THREADS, config.vec3Size);
@@ -506,6 +543,7 @@ int main(int argc, char** argv)
 #else
 	chunkPool = new(chunkHeap) MemoryPool(chunkHeap, 1, config.vec3Size * MAX_THREADS);
 	charPool = new(charHeap) MemoryPool(charHeap, 1, config.charSize * MAX_THREADS);
+#endif
 #endif
 
 	JSONSphereInfo* info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
@@ -520,11 +558,13 @@ int main(int argc, char** argv)
 	float timeToComplete = timer.Mark();
 	std::cout << "Time to complete: " << timeToComplete << std::endl;
 
+#ifdef USE_MEMORY_POOLS
 	delete chunkPool;
 	chunkPool = nullptr;
 
 	delete charPool;
 	charPool = nullptr;
+#endif
 
 	info->Cleanup();
 
