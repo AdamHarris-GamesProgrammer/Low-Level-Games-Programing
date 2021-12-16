@@ -6,7 +6,10 @@
 
 struct Header {
 	int size;
+#if DEBUG
 	int check = deadCode;
+#endif
+
 	Heap* pHeap;
 	Header* pPrevious = NULL;
 	Header* pNext = NULL;
@@ -14,7 +17,10 @@ struct Header {
 
 struct Footer {
 	int reserved;
+
+#ifdef DEBUG
 	int check = deadCode;
+#endif
 };
 
 

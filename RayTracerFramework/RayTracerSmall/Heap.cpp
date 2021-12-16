@@ -21,7 +21,10 @@ void Heap::AllocateMemory(Header* header, int size)
 
 
 	header->size = size;
+#ifdef DEBUG
 	header->check = deadCode;
+#endif // DEBUG
+
 
 	header->pPrevious = NULL;
 	header->pNext = pHead;
@@ -95,6 +98,7 @@ void Heap::DisplayDebugInformation()
 
 void Heap::CheckIntegrity()
 {
+#ifdef DEBUG
 	std::cout << "Checking integrity of " << _name << std::endl;
 
 	bool errorFound = false;
@@ -115,7 +119,7 @@ void Heap::CheckIntegrity()
 				std::cout << "[ERROR: Heap::CheckIntegrity]: Header check code does not match" << std::endl;
 				errorFound = true;
 				totalErrors++;
-			}
+		}
 
 			void* pFooterAddr = ((char*)pCurrent + sizeof(Header) + pCurrent->size);
 			Footer* pFooter = (Footer*)pFooterAddr;
@@ -140,6 +144,7 @@ void Heap::CheckIntegrity()
 	}
 
 	SetConsoleColor(WHITE);
+#endif
 }
 
 void Heap::SetConsoleColor(ConsoleColor color)

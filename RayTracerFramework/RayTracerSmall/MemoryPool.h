@@ -49,7 +49,9 @@ public:
 		//Sets up the footer pointer
 		void* pFooterAddr = ((char*)pMem + sizeof(Header) + _poolSize);
 		Footer* pFooter = (Footer*)pFooterAddr;
+#ifdef DEBUG
 		pFooter->check = deadCode;
+#endif
 	}
 
 	~MemoryPool()
