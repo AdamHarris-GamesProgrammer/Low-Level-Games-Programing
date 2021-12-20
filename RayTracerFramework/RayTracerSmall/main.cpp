@@ -44,28 +44,24 @@
 #include "JSONReader.h"
 #include "MemoryPool.h"
 #include "ThreadManager.h"
+#include "RenderConfig.h"
 
 #if defined __linux__ || defined __APPLE__
 // "Compiled for Linux
 #else
-
 // Windows doesn't define these values by default, Linux does
-#define M_PI 3.141592653589793
 #define INFINITY 1e8
 #endif
 
 
-
-//[comment]
 // This variable controls the maximum recursion depth
-//[/comment]
 #define MAX_RAY_DEPTH 5
+
+//PROGRAM CONTROLS 
 #define MAX_THREADS 4
-
-
-#define MULTIPLE_CONTAINERS
-#define USE_PARALLEL_FOR
-#define USE_MEMORY_POOLS
+//#define MULTIPLE_CONTAINERS
+//#define USE_PARALLEL_FOR
+//#define USE_MEMORY_POOLS
 
 #ifdef USE_MEMORY_POOLS
 MemoryPool* chunkPool;
@@ -174,32 +170,6 @@ Vec3f trace(
 	return surfaceColor + hit->_emissionColor;
 }
 
-float fov = 30;
-float angle = tan(M_PI * 0.5 * fov / 180.0f);
-
-struct RenderConfig {
-	unsigned width;
-	unsigned height;
-	unsigned chunkHeight;
-	unsigned chunkSize;
-	size_t charSize;
-	size_t vec3Size;
-	float invWidth;
-	float invHeight;
-	float aspectRatio;
-	char buffer[32];
-
-	void CalculateValues() {
-		chunkHeight = height / MAX_THREADS;
-		chunkSize = (width * height) / MAX_THREADS;
-		invWidth = 1 / float(width);
-		invHeight = 1 / float(height);
-		aspectRatio = width / float(height);
-		charSize = chunkSize * 3;
-		vec3Size = chunkSize * sizeof(Vec3f);
-	}
-};
-
 void RenderSector(
 	const unsigned int& startX,
 	const unsigned int& startY,
@@ -208,7 +178,7 @@ void RenderSector(
 	const float& invWidth,
 	const float& invHeight,
 	const float& aspectratio,
-	const Sphere* spheres, Vec3f* image, const int& size)
+	const Sphere* spheres, Vec3f* image, const int& size, const float& angle)
 {
 #ifdef MULTIPLE_CONTAINERS
 #ifdef USE_PARALLEL_FOR
@@ -324,7 +294,7 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 		RenderConfig config = renderConfigs[i];
 		ThreadManager::CreateTask([config, currentChunk, &spheres, &size, startY, endY, currentArr] 
 			{
-				RenderSector(0, startY, config.width, endY, config.invWidth, config.invHeight, config.aspectRatio, spheres, currentChunk, size); 
+				RenderSector(0, startY, config.width, endY, config.invWidth, config.invHeight, config.aspectRatio, spheres, currentChunk, size, config.angle);
 				WriteSector(currentChunk, config.chunkSize, currentArr);
 			});
 		startY += config.chunkHeight;
@@ -378,7 +348,7 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	for (int i = 0; i < MAX_THREADS; ++i) {
 		ThreadManager::CreateTask([config, image, &spheres, &size, startY, endY, charArray, i] 
 			{
-				RenderSector(0, startY, config.width, endY, config.invWidth, config.invHeight, config.aspectRatio, spheres, image, size); 
+				RenderSector(0, startY, config.width, endY, config.invWidth, config.invHeight, config.aspectRatio, spheres, image, size, config.angle); 
 				int startingIndex = (config.width * config.chunkHeight) * i;
 				int charStartIndex = config.width * (config.chunkHeight * 3) * i;
 				WriteSector(image, config.chunkSize, charArray, startingIndex, charStartIndex);
@@ -523,16 +493,11 @@ int main(int argc, char** argv)
 	// This sample only allows one choice per program execution. Feel free to improve upon this
 	srand(13);
 
-	RenderConfig config;
-	config.width = 640;
-	config.height = 480;
-
-	config.CalculateValues();
+	RenderConfig config = RenderConfig(640, 480, MAX_THREADS);
 
 	Timer timer;
 
 	Heap* chunkHeap = HeapManager::CreateHeap("ChunkHeap");
-
 	Heap* charHeap = HeapManager::CreateHeap("CharHeap");
 
 #ifdef USE_MEMORY_POOLS
@@ -548,8 +513,6 @@ int main(int argc, char** argv)
 
 	JSONSphereInfo* info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
-
-	std::cout << sizeof(Sphere) << std::endl;
 	SmoothScaling(config);
 	//BasicRender(config);
 	//SimpleShrinking(config);

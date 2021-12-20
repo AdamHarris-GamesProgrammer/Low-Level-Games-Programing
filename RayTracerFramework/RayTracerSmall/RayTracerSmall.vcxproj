@@ -163,6 +163,7 @@
     <ClInclude Include="JSONReader.h" />
     <ClInclude Include="MemoryManager.h" />
     <ClInclude Include="MemoryPool.h" />
+    <ClInclude Include="RenderConfig.h" />
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="ThreadManager.h" />
     <ClInclude Include="Timer.h" />
