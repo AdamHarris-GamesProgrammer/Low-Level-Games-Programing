@@ -33,7 +33,9 @@
 
 #include <immintrin.h>
 
+#if defined _WIN32
 #include <ppl.h>
+#endif
 
 #include "Heap.h"
 #include "Timer.h"
@@ -60,7 +62,9 @@
 //PROGRAM CONTROLS 
 #define MAX_THREADS 4
 //#define MULTIPLE_CONTAINERS
+#if defined _WIN32
 //#define USE_PARALLEL_FOR
+#endif
 //#define USE_MEMORY_POOLS
 
 #ifdef USE_MEMORY_POOLS
@@ -181,6 +185,7 @@ void RenderSector(
 	const Sphere* spheres, Vec3f* image, const int& size, const float& angle)
 {
 #ifdef MULTIPLE_CONTAINERS
+#if defined _WIN32
 #ifdef USE_PARALLEL_FOR
 	//Using multiple containers and parallel_for
 	concurrency::parallel_for(startY, endY, [image, &spheres, &size, &startX, &endY, &endX, &invWidth, &invHeight, &aspectratio, &startY](size_t y)
@@ -208,6 +213,21 @@ void RenderSector(
 	}
 #endif // USE_PARALLEL_FOR
 #else
+	//Using multiple containers but without parallel_for
+	int index = 0;
+	for (unsigned y = startY; y < endY; ++y) {
+		for (unsigned x = startX; x < endX; ++x, index++) {
+			float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
+			float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
+			Vec3f raydir(xx, yy, -1);
+			raydir.normalize();
+			image[index] = trace(Vec3f(0), raydir, spheres, 0, size);
+		}
+	}
+	std::cout << "Render on Linux With one container" << std::endl;
+#endif
+
+#if defined _WIN32
 #ifdef USE_PARALLEL_FOR
 	//Using one container with parallel_for
 	concurrency::parallel_for(startY, endY, [image, &spheres, &size, &startX, &endX, &invWidth, &invHeight, &aspectratio](size_t y)
@@ -233,6 +253,20 @@ void RenderSector(
 }
 	}
 #endif // USE_PARALLEL_FOR
+#else
+	//Using one container without parallel_for
+	int index = endX * startY + startX;
+	for (unsigned y = startY; y < endY; ++y) {
+		for (unsigned x = startX; x < endX; ++x, index++) {
+			float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
+			float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
+			Vec3f raydir(xx, yy, -1);
+			raydir.normalize();
+			image[index] = trace(Vec3f(0), raydir, spheres, 0, size);
+}
+	}
+	std::cout << "Render on Linux With one container" << std::endl;
+#endif
 #endif // MULTIPLE_CONTAINERS
 }
 
