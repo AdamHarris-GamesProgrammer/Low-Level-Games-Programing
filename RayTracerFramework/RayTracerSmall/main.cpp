@@ -63,7 +63,7 @@
 #define MAX_THREADS 4
 //#define MULTIPLE_CONTAINERS
 #if defined _WIN32
-//#define USE_PARALLEL_FOR
+#define USE_PARALLEL_FOR
 #endif
 //#define USE_MEMORY_POOLS
 
@@ -174,21 +174,9 @@ Vec3f trace(
 	return surfaceColor + hit->_emissionColor;
 }
 
-void RenderSector(
-	const unsigned int& startX,
-	const unsigned int& startY,
-	const unsigned int& endX,
-	const unsigned int& endY,
-	const float& invWidth,
-	const float& invHeight,
-	const float& aspectratio,
-	const Sphere* spheres, Vec3f* image, const int& size, const float& angle)
+inline void MultiContainerParallel(const unsigned int& startY, const unsigned int& endY, Vec3f* image, const Sphere* spheres, const int& size, const unsigned int& startX, const unsigned int& endX, const float& invWidth, const float& invHeight, const float& aspectratio, const float& angle)
 {
-#ifdef MULTIPLE_CONTAINERS
-#if defined _WIN32
-#ifdef USE_PARALLEL_FOR
-	//Using multiple containers and parallel_for
-	concurrency::parallel_for(startY, endY, [image, &spheres, &size, &startX, &endY, &endX, &invWidth, &invHeight, &aspectratio, &startY](size_t y)
+	concurrency::parallel_for(startY, endY, [image, &spheres, &size, &startX, &endY, &endX, &invWidth, &invHeight, &aspectratio, &startY, &angle](size_t y)
 		{
 			for (unsigned x = startX; x < endX; ++x) {
 				float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
@@ -199,38 +187,25 @@ void RenderSector(
 				image[endX * (y - startY) + x] = trace(Vec3f(0), raydir, spheres, 0, size);
 			}
 		});
-#else
-	//Using multiple containers but without parallel_for
-	int index = 0;
-	for (unsigned y = startY; y < endY; ++y) {
-		for (unsigned x = startX; x < endX; ++x, index++) {
-			float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
-			float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
-			Vec3f raydir(xx, yy, -1);
-			raydir.normalize();
-			image[index] = trace(Vec3f(0), raydir, spheres, 0, size);
-		}
-	}
-#endif // USE_PARALLEL_FOR
-#else
-	//Using multiple containers but without parallel_for
-	int index = 0;
-	for (unsigned y = startY; y < endY; ++y) {
-		for (unsigned x = startX; x < endX; ++x, index++) {
-			float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
-			float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
-			Vec3f raydir(xx, yy, -1);
-			raydir.normalize();
-			image[index] = trace(Vec3f(0), raydir, spheres, 0, size);
-		}
-	}
-	std::cout << "Render on Linux With one container" << std::endl;
-#endif
+}
 
-#if defined _WIN32
-#ifdef USE_PARALLEL_FOR
-	//Using one container with parallel_for
-	concurrency::parallel_for(startY, endY, [image, &spheres, &size, &startX, &endX, &invWidth, &invHeight, &aspectratio](size_t y)
+inline void MultiContainerNonParallel(const unsigned int& startY, const unsigned int& endY, const unsigned int& startX, const unsigned int& endX, const float& invWidth, const float& angle, const float& aspectratio, const float& invHeight, Vec3f* image, const Sphere* spheres, const int& size)
+{
+	int index = 0;
+	for (unsigned y = startY; y < endY; ++y) {
+		for (unsigned x = startX; x < endX; ++x, index++) {
+			float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
+			float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
+			Vec3f raydir(xx, yy, -1);
+			raydir.normalize();
+			image[index] = trace(Vec3f(0), raydir, spheres, 0, size);
+		}
+	}
+}
+
+inline void SingularContainerParallel(const unsigned int& startY, const unsigned int& endY, Vec3f* image, const Sphere* spheres, const int& size, const unsigned int& startX, const unsigned int& endX, const float& invWidth, const float& invHeight, const float& aspectratio, const float& angle)
+{
+	concurrency::parallel_for(startY, endY, [image, &spheres, &size, &startX, &endX, &invWidth, &invHeight, &aspectratio, &angle](size_t y)
 		{
 			for (unsigned x = startX; x < endX; ++x) {
 				float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
@@ -238,10 +213,12 @@ void RenderSector(
 				Vec3f raydir(xx, yy, -1);
 				raydir.normalize();
 				image[endX * y + x] = trace(Vec3f(0), raydir, spheres, 0, size);
-}
+			}
 		});
-#else
-	//Using one container without parallel_for
+}
+
+inline void SingularContainerNonParallel(const unsigned int& endX, const unsigned int& startY, const unsigned int& startX, const unsigned int& endY, const float& invWidth, const float& angle, const float& aspectratio, const float& invHeight, Vec3f* image, const Sphere* spheres, const int& size)
+{
 	int index = endX * startY + startX;
 	for (unsigned y = startY; y < endY; ++y) {
 		for (unsigned x = startX; x < endX; ++x, index++) {
@@ -250,24 +227,42 @@ void RenderSector(
 			Vec3f raydir(xx, yy, -1);
 			raydir.normalize();
 			image[index] = trace(Vec3f(0), raydir, spheres, 0, size);
-}
+		}
 	}
-#endif // USE_PARALLEL_FOR
+}
+
+void RenderSector(
+	const unsigned int& startX,
+	const unsigned int& startY,
+	const unsigned int& endX,
+	const unsigned int& endY,
+	const float& invWidth,
+	const float& invHeight,
+	const float& aspectratio,
+	const Sphere* spheres, Vec3f* image, const int& size, const float& angle)
+{
+
+#ifdef _WIN32
+#ifdef MULTIPLE_CONTAINERS
+#ifdef USE_PARALLEL_FOR
+	MultiContainerParallel(startY, endY, image, spheres, size, startX, endX, invWidth, invHeight, aspectratio, angle);
 #else
-	//Using one container without parallel_for
-	int index = endX * startY + startX;
-	for (unsigned y = startY; y < endY; ++y) {
-		for (unsigned x = startX; x < endX; ++x, index++) {
-			float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
-			float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
-			Vec3f raydir(xx, yy, -1);
-			raydir.normalize();
-			image[index] = trace(Vec3f(0), raydir, spheres, 0, size);
-}
-	}
-	std::cout << "Render on Linux With one container" << std::endl;
+	MultiContainerNonParallel(startY, endY, startX, endX, invWidth, angle, aspectratio, invHeight, image, spheres, size);
 #endif
-#endif // MULTIPLE_CONTAINERS
+#else
+#ifdef USE_PARALLEL_FOR
+	SingularContainerParallel(startY, endY, image, spheres, size, startX, endX, invWidth, invHeight, aspectratio, angle);
+#else
+	SingularContainerNonParallel(endX, startY, startX, endY, invWidth, angle, aspectratio, invHeight, image, spheres, size);
+#endif
+#endif
+#else
+#ifdef MULTIPLE_CONTAINERS
+	MultiContainerNonParallel(startY, endY, startX, endX, invWidth, angle, aspectratio, invHeight, image, spheres, size);
+#else
+	SingularContainerNonParallel(endX, startY, startX, endY, invWidth, angle, aspectratio, invHeight, image, spheres, size);
+#endif
+#endif // _WIN32
 }
 
 

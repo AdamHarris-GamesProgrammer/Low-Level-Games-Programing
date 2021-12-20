@@ -33,6 +33,7 @@ struct RenderConfig {
 		CalculateValues(threadCount);
 	}
 
+	RenderConfig() = default;
 private:
 	//Buffer data. Keeps the struct 64 bit aligned 
 	char buffer[24];
