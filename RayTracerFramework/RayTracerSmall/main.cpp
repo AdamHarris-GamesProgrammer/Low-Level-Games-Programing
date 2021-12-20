@@ -31,8 +31,6 @@
 #include <sstream>
 #include <string>
 
-#include <immintrin.h>
-
 #if defined _WIN32
 #include <ppl.h>
 #endif
@@ -87,12 +85,7 @@ inline float mix(const float& a, const float& b, const float& mix)
 // is the color of the object at the intersection point, otherwise it returns
 // the background color.
 //[/comment]
-Vec3f trace(
-	const Vec3f& rayorig,
-	const Vec3f& raydir,
-	const Sphere* spheres,
-	const int& depth,
-	const int& size)
+Vec3f trace(const Vec3f& rayorig, const Vec3f& raydir, const Sphere* spheres, const int& depth, const int& size)
 {
 	//if (raydir.length() != 1) std::cerr << "Error " << raydir << std::endl;
 	float tnear = INFINITY;
@@ -235,15 +228,7 @@ inline void SingularContainerNonParallel(const unsigned int& endX, const unsigne
 	}
 }
 
-void RenderSector(
-	const unsigned int& startX,
-	const unsigned int& startY,
-	const unsigned int& endX,
-	const unsigned int& endY,
-	const float& invWidth,
-	const float& invHeight,
-	const float& aspectratio,
-	const Sphere* spheres, Vec3f* image, const int& size, const float& angle)
+void RenderSector(const unsigned int& startX, const unsigned int& startY, const unsigned int& endX, const unsigned int& endY, const float& invWidth, const float& invHeight, const float& aspectratio, const Sphere* spheres, Vec3f* image, const int& size, const float& angle)
 {
 
 #ifdef _WIN32
@@ -300,8 +285,7 @@ void WriteSector(Vec3f* chunk, int size, char* ss, int startingIndex, int charSt
 void Render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
 {
 #ifndef USE_MEMORY_POOLS
-	Heap* chunkHeap = HeapManager::GetHeap("ChunkHeap");
-	Heap* charHeap = HeapManager::GetHeap("CharHeap");
+
 #endif
 
 #ifdef MULTIPLE_CONTAINERS
@@ -372,8 +356,10 @@ void Render(const RenderConfig& config, const Sphere* spheres, const int& iterat
 	Vec3f* image = (Vec3f*)chunkPool->Alloc(config.chunkSize * MAX_THREADS);
 	char* charArray = (char*)charPool->Alloc(config.charSize * MAX_THREADS);
 #else
-	Vec3f* image = new Vec3f[config.chunkSize * MAX_THREADS];
-	char* charArray = new char[config.charSize * MAX_THREADS];
+	Heap* chunkHeap = HeapManager::GetHeap("ChunkHeap");
+	Heap* charHeap = HeapManager::GetHeap("CharHeap");
+	Vec3f* image = ::new(chunkHeap) Vec3f[config.singularChunkSize];
+	char* charArray = ::new(charHeap) char[config.singularCharSize];
 #endif	
 
 	int startY = 0;
@@ -573,7 +559,6 @@ int main(int argc, char** argv)
 	chunkHeap = nullptr;
 	charHeap = nullptr;
 
-	//system("ffmpeg -framerate 25 -i spheres%d.ppm -vcodec mpeg4 output.mp4");
 	return 0;
 
 }

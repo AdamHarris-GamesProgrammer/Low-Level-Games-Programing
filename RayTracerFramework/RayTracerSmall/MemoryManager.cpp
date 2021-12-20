@@ -26,7 +26,25 @@ void* operator new(size_t size, Heap* heap) {
 	return pStartMemBlock;
 }
 
+void* operator new[](size_t size, Heap* heap) {
+	size_t requestedBytes = size + sizeof(Header) + sizeof(Footer);
+	char* pMem = (char*)malloc(requestedBytes);
 
+	Header* pHeader = (Header*)pMem;
+	pHeader->pHeap = heap;
+
+	heap->AllocateMemory(pHeader, size);
+
+	//Get the location of the footer start position
+	//pMem (start of mem block) + sizeof(header) (offset) + size of the mem block. Will give the memory position of the footer
+	void* pFooterAddr = pMem + sizeof(Header) + size;
+	Footer* pFooter = (Footer*)pFooterAddr;
+#ifdef DEBUG
+	pFooter->check = deadCode;
+#endif
+	void* pStartMemBlock = pMem + sizeof(Header);
+	return pStartMemBlock;
+}
 
 void operator delete(void* pMem) {
 	Header* pHeader = (Header*)((char*)pMem - sizeof(Header));

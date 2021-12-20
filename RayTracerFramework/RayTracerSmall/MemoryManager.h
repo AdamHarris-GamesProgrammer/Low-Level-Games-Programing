@@ -26,6 +26,7 @@ struct Footer {
 
 
 void* operator new(size_t size, Heap* heap);
+void* operator new[](size_t size, Heap* heap);
 void* operator new(size_t size);
 void operator delete(void* pMem);
 

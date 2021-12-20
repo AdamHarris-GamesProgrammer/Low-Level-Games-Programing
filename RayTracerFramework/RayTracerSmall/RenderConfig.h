@@ -26,6 +26,9 @@ struct RenderConfig {
 	//Angle of the camera. (tan(pi * 0.5 * fov / 180)
 	float angle;
 
+	unsigned singularChunkSize;
+	unsigned singularCharSize;
+
 	RenderConfig(unsigned width, unsigned height, unsigned threadCount, float fov = 30) {
 		this->width = width;
 		this->height = height;
@@ -36,7 +39,7 @@ struct RenderConfig {
 	RenderConfig() = default;
 private:
 	//Buffer data. Keeps the struct 64 bit aligned 
-	char buffer[24];
+	char buffer[16];
 
 	//Calculates all the values of the struct based on the width and height of the frames.
 	void CalculateValues(unsigned threadCount) {
@@ -48,5 +51,8 @@ private:
 		charSize = chunkSize * 3;
 		vec3Size = chunkSize * sizeof(Vec3f);
 		angle = tan(M_PI * 0.5 * fov / 180.0f);
+
+		singularChunkSize = chunkSize * threadCount;
+		singularCharSize = charSize * threadCount;
 	}
 };
