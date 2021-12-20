@@ -174,6 +174,7 @@ Vec3f trace(
 	return surfaceColor + hit->_emissionColor;
 }
 
+#ifdef _WIN32
 inline void MultiContainerParallel(const unsigned int& startY, const unsigned int& endY, Vec3f* image, const Sphere* spheres, const int& size, const unsigned int& startX, const unsigned int& endX, const float& invWidth, const float& invHeight, const float& aspectratio, const float& angle)
 {
 	concurrency::parallel_for(startY, endY, [image, &spheres, &size, &startX, &endY, &endX, &invWidth, &invHeight, &aspectratio, &startY, &angle](size_t y)
@@ -188,6 +189,7 @@ inline void MultiContainerParallel(const unsigned int& startY, const unsigned in
 			}
 		});
 }
+#endif
 
 inline void MultiContainerNonParallel(const unsigned int& startY, const unsigned int& endY, const unsigned int& startX, const unsigned int& endX, const float& invWidth, const float& angle, const float& aspectratio, const float& invHeight, Vec3f* image, const Sphere* spheres, const int& size)
 {
@@ -203,6 +205,7 @@ inline void MultiContainerNonParallel(const unsigned int& startY, const unsigned
 	}
 }
 
+#ifdef _WIN32
 inline void SingularContainerParallel(const unsigned int& startY, const unsigned int& endY, Vec3f* image, const Sphere* spheres, const int& size, const unsigned int& startX, const unsigned int& endX, const float& invWidth, const float& invHeight, const float& aspectratio, const float& angle)
 {
 	concurrency::parallel_for(startY, endY, [image, &spheres, &size, &startX, &endX, &invWidth, &invHeight, &aspectratio, &angle](size_t y)
@@ -216,6 +219,7 @@ inline void SingularContainerParallel(const unsigned int& startY, const unsigned
 			}
 		});
 }
+#endif
 
 inline void SingularContainerNonParallel(const unsigned int& endX, const unsigned int& startY, const unsigned int& startX, const unsigned int& endY, const float& invWidth, const float& angle, const float& aspectratio, const float& invHeight, Vec3f* image, const Sphere* spheres, const int& size)
 {
