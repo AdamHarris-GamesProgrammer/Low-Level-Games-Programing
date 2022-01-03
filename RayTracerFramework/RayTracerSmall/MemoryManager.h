@@ -6,7 +6,7 @@
 
 struct Header {
 	int size;
-#if DEBUG
+#if _DEBUG
 	int check = deadCode;
 #endif
 
@@ -18,7 +18,7 @@ struct Header {
 struct Footer {
 	int reserved;
 
-#ifdef DEBUG
+#ifdef _DEBUG
 	int check = deadCode;
 #endif
 };

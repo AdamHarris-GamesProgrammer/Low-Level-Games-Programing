@@ -58,12 +58,12 @@
 #define MAX_RAY_DEPTH 5
 
 //PROGRAM CONTROLS 
-#define MAX_THREADS 4
-//#define MULTIPLE_CONTAINERS
+#define MAX_THREADS 8
+#define MULTIPLE_CONTAINERS
 #if defined _WIN32
-#define USE_PARALLEL_FOR
+//#define USE_PARALLEL_FOR
 #endif
-//#define USE_MEMORY_POOLS
+#define USE_MEMORY_POOLS
 
 #ifdef USE_MEMORY_POOLS
 MemoryPool* chunkPool;
@@ -256,22 +256,22 @@ void RenderSector(const unsigned int& startX, const unsigned int& startY, const 
 
 
 #ifdef MULTIPLE_CONTAINERS 
-void WriteSector(Vec3f* chunk, int size, char* ss) {
+void WriteSector(Vec3f* chunk, int size, char* charArray) {
 	int charIndex = 0;
 	for (unsigned i = 0; i < size; ++i) {
-		ss[charIndex] =		(unsigned char)((1.0f < chunk[i].x ? 1.0f : chunk[i].x) * 255);
-		ss[charIndex + 1] = (unsigned char)((1.0f < chunk[i].y ? 1.0f : chunk[i].y) * 255);
-		ss[charIndex + 2] = (unsigned char)((1.0f < chunk[i].z ? 1.0f : chunk[i].z) * 255);
+		charArray[charIndex] =		(unsigned char)((1.0f < chunk[i].x ? 1.0f : chunk[i].x) * 255);
+		charArray[charIndex + 1] = (unsigned char)((1.0f < chunk[i].y ? 1.0f : chunk[i].y) * 255);
+		charArray[charIndex + 2] = (unsigned char)((1.0f < chunk[i].z ? 1.0f : chunk[i].z) * 255);
 		charIndex += 3;
 	}
 }
 #else 
-void WriteSector(Vec3f* chunk, int size, char* ss, int startingIndex, int charStartIndex) {
+void WriteSector(Vec3f* chunk, int size, char* charArray, int startingIndex, int charStartIndex) {
 	int charIndex = charStartIndex;
 	for (unsigned i = startingIndex; i < startingIndex + size; ++i) {
-		ss[charIndex] =		(unsigned char)((1.0f < chunk[i].x ? 1.0f : chunk[i].x) * 255);
-		ss[charIndex + 1] = (unsigned char)((1.0f < chunk[i].y ? 1.0f : chunk[i].y) * 255);
-		ss[charIndex + 2] = (unsigned char)((1.0f < chunk[i].z ? 1.0f : chunk[i].z) * 255);
+		charArray[charIndex] =		(unsigned char)((1.0f < chunk[i].x ? 1.0f : chunk[i].x) * 255);
+		charArray[charIndex + 1] = (unsigned char)((1.0f < chunk[i].y ? 1.0f : chunk[i].y) * 255);
+		charArray[charIndex + 2] = (unsigned char)((1.0f < chunk[i].z ? 1.0f : chunk[i].z) * 255);
 		charIndex += 3;
 	}
 }
@@ -284,10 +284,6 @@ void WriteSector(Vec3f* chunk, int size, char* ss, int startingIndex, int charSt
 //[/comment]
 void Render(const RenderConfig& config, const Sphere* spheres, const int& iteration, const int& size)
 {
-#ifndef USE_MEMORY_POOLS
-
-#endif
-
 #ifdef MULTIPLE_CONTAINERS
 	Vec3f** chunkArrs = new Vec3f * [MAX_THREADS];
 	char** charArrs = new char* [MAX_THREADS];
@@ -405,7 +401,6 @@ void BasicRender(const RenderConfig& config)
 {
 	//Create dynamic array for spheres, more efficient than creating vector
 	Sphere* spheres = new Sphere[4];
-
 	spheres[0] = Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 0, 0.0);
 	spheres[1] = Sphere(Vec3f(0.0, 0, -20), 4, Vec3f(1.00, 0.32, 0.36), 1, 0.5); // The radius paramter is the value we will change
 	spheres[2] = Sphere(Vec3f(5.0, -1, -15), 2, Vec3f(0.90, 0.76, 0.46), 1, 0.0);
@@ -532,10 +527,10 @@ int main(int argc, char** argv)
 
 	JSONSphereInfo* info = JSONReader::LoadSphereInfoFromFile("Animations/animSample.json");
 
-	SmoothScaling(config);
+	//SmoothScaling(config);
 	//BasicRender(config);
 	//SimpleShrinking(config);
-	//RenderFromJSONFile(info, config);
+	RenderFromJSONFile(*info, config);
 
 	float timeToComplete = timer.Mark();
 	std::cout << "Time to complete: " << timeToComplete << std::endl;
@@ -548,11 +543,14 @@ int main(int argc, char** argv)
 	charPool = nullptr;
 #endif
 
+	//Cleans the animation info
 	info->Cleanup();
 
+	//Debugs all heaps
 	std::cout << "\n\n" << "HEAP DUMP" << "\n\n";
 	HeapManager::DebugAll();
 
+	//Cleans up the heaps
 	std::cout << "Deleting heaps" << std::endl;
 	HeapManager::CleanHeaps();
 

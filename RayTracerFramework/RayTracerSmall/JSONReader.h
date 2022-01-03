@@ -11,11 +11,14 @@
 using json = nlohmann::json;
 
 struct JSONSphereInfo {
+	//Arrays of information for an animation
 	Sphere* sphereArr;
 	Vec3f* sphereEndPositions;
 	Vec3f* sphereMovementsPerFrame;
 	Vec3f* sphereEndColor;
 	Vec3f* sphereColorPerFrame;
+
+	//Frame and sphere count. Needed to create arrays for each sphere
 	int frameCount;
 	int sphereCount;
 
@@ -44,7 +47,9 @@ struct JSONSphereInfo {
 	}
 
 	void CalculateSphereMovements() {
+		//Cycles through each sphere
 		for (int i = 0; i < sphereCount; i++) {
+			//Calculates the amount of movement each frame based on lerping
 			Vec3f diff = sphereEndPositions[i] - sphereArr[i]._center;
 			diff.x /= frameCount;
 			diff.y /= frameCount;
@@ -54,10 +59,10 @@ struct JSONSphereInfo {
 	}
 
 	void CalculateSphereColor() {
+		//Cycles through each sphere
 		for (int i = 0; i < sphereCount; i++) {
+			//Lerps between the start and end colors
 			Vec3f diff = sphereEndColor[i] - sphereArr[i]._surfaceColor;
-			Vec3f color = sphereArr[i]._surfaceColor;
-			Vec3f endColor = sphereEndColor[i];
 			diff.x /= frameCount;
 			diff.y /= frameCount;
 			diff.z /= frameCount;
@@ -69,9 +74,11 @@ struct JSONSphereInfo {
 class JSONReader
 {
 public:
+	//Loads animation information from a json file
 	static JSONSphereInfo* LoadSphereInfoFromFile(const char* filepath);
 
 private:
+	//helper methods for loading a file
 	static bool HasAttribute(json* file, std::string key);
 	static Vec3f ReadVec3f(std::vector<float> vec);
 };

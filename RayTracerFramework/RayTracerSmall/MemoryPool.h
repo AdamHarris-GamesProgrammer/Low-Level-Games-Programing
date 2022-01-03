@@ -92,8 +92,6 @@ public:
 		//((char*)_pMemBlock + _poolSize. Pointer arithmetic to get the memory address at the end of the pool
 		if (p > _pMemBlock && p < ((char*)_pMemBlock + _poolSize))
 		{
-			//std::cout << "Setting memory free starting at: " << p << std::endl;
-
 			Node* pCurUnit = (Node*)((char*)p - sizeof(Node));
 
 			Node* pPrev = pCurUnit->pPrev;
